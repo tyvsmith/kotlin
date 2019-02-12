@@ -165,7 +165,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 hasBlockBody() -> if (!stubMode) {
                     bodyBlockExpression?.accept(this@Visitor, Unit) as? FirBlock
                 } else {
-                    FirSingleExpressionBlock(FirExpressionStub(this).toReturn())
+                    FirSingleExpressionBlock(FirExpressionStub(null).toReturn())
                 }
                 else -> {
                     val result = { bodyExpression }.toFirExpression("Function has no body (but should)")
