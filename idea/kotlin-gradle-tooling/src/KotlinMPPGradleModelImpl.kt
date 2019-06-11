@@ -5,6 +5,8 @@
 
 package org.jetbrains.kotlin.gradle
 
+import org.gradle.api.tasks.Exec
+import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import java.io.File
 import java.util.*
 import kotlin.collections.HashSet
@@ -128,7 +130,8 @@ data class KotlinTargetImpl(
     override val disambiguationClassifier: String?,
     override val platform: KotlinPlatform,
     override val compilations: Collection<KotlinCompilation>,
-    override val jar: KotlinTargetJar?
+    override val jar: KotlinTargetJar?,
+    override val konanArtifacts: List<KonanArtifactModel>
 ) : KotlinTarget {
     override fun toString() = name
 
@@ -142,7 +145,8 @@ data class KotlinTargetImpl(
                 cloningCache[initialCompilation] = it
             }
         }.toList(),
-        KotlinTargetJarImpl(target.jar?.archiveFile)
+        KotlinTargetJarImpl(target.jar?.archiveFile),
+        target.konanArtifacts.map { KonanArtifactModelImpl(it) }.toList()
     )
 }
 
@@ -192,4 +196,43 @@ class KotlinPlatformContainerImpl() : KotlinPlatformContainer {
     override fun addSimplePlatforms(platforms: Collection<KotlinPlatform>) {
         (myPlatforms ?: HashSet<KotlinPlatform>().apply { myPlatforms = this }).addAll(platforms)
     }
+}
+
+data class KonanArtifactModelImpl(
+    override val targetName: String,
+    override val executableName: String,
+    override val type: CompilerOutputKind,
+    override val targetPlatform: String,
+    override val file: File,
+    override val buildTaskPath: String,
+    override val runConfiguration: KonanRunConfigurationModel?,
+    override val isTests: Boolean
+) : KonanArtifactModel {
+    constructor(artifact: KonanArtifactModel) : this(
+        artifact.targetName,
+        artifact.executableName,
+        artifact.type,
+        artifact.targetPlatform,
+        artifact.file,
+        artifact.buildTaskPath,
+        artifact.runConfiguration?.let { KonanRunConfigurationModelImpl(it) },
+        artifact.isTests
+    )
+}
+
+data class KonanRunConfigurationModelImpl(
+    override val workingDirectory: String,
+    override val programParameters: List<String>,
+    override val environmentVariables: Map<String, String>
+) : KonanRunConfigurationModel {
+    constructor(configuration: KonanRunConfigurationModel) : this(
+        configuration.workingDirectory,
+        configuration.programParameters,
+        configuration.environmentVariables
+    )
+
+    constructor(runTask: Exec) : this(runTask.workingDir.path,
+                                      runTask.args as List<String>? ?: emptyList(),
+                                      (runTask.environment as Map<String, Any>?)
+                                          ?.mapValues { it.value.toString() } ?: emptyMap())
 }
