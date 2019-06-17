@@ -380,6 +380,13 @@
         defaultValue="false"
         restartRequired="false"/>
 
+    <registryKey
+        key="kotlin.use.composite.analysis"
+        description="Whether to use Composite Analysis mode, where all platforms are analyzed together"
+        defaultValue="false"
+        restartRequired="true"
+        />
+
     <internalFileTemplate name="Kotlin File"/>
     <internalFileTemplate name="Kotlin Class"/>
     <internalFileTemplate name="Kotlin Enum"/>
