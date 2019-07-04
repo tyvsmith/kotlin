@@ -131,7 +131,7 @@ class KotlinResolutionCallbacksImpl(
 
         val builtIns = outerCallContext.scope.ownerDescriptor.builtIns
         val expectedType = createFunctionType(
-            builtIns, annotations, receiverType, parameters, null,
+            builtIns, annotations, refinedReceiverType, parameters, null,
             lambdaInfo.expectedType, isSuspend
         )
 
