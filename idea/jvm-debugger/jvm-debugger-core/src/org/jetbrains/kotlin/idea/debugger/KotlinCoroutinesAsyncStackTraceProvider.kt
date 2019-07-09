@@ -161,6 +161,8 @@ class KotlinCoroutinesAsyncStackTraceProvider : KotlinCoroutinesAsyncStackTraceP
         val rawSpilledVariables = context.invokeMethod(debugMetadataKtType, getSpilledVariableFieldMappingMethod, args) as? ArrayReference
             ?: return null
 
+        context.keepReference(rawSpilledVariables)
+
         val length = rawSpilledVariables.length() / 2
         val spilledVariables = ArrayList<XNamedValue>(length)
 
