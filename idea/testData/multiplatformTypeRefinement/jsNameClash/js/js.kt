@@ -1,5 +1,3 @@
-//@file:Suppress(U)
-
 package sample
 
 actual interface Input
