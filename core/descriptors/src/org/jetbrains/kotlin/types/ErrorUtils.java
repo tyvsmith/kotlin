@@ -523,6 +523,12 @@ public class ErrorUtils {
             public String toString() {
                 return debugName;
             }
+
+            @TypeRefinement
+            @Override
+            public TypeConstructor refine(@NotNull KotlinTypeRefiner kotlinTypeRefiner) {
+                return this;
+            }
         };
     }
 
@@ -614,6 +620,12 @@ public class ErrorUtils {
         @Override
         public KotlinBuiltIns getBuiltIns() {
             return DescriptorUtilsKt.getBuiltIns(typeParameterDescriptor);
+        }
+
+        @Nullable
+        @Override
+        public TypeConstructor refine(@NotNull KotlinTypeRefiner kotlinTypeRefiner) {
+            return null;
         }
     }
 
