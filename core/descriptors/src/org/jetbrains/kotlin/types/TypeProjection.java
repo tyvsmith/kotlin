@@ -31,9 +31,6 @@ public interface TypeProjection extends TypeArgumentMarker {
     boolean isStarProjection();
 
     @NotNull
-    TypeProjection replaceType(@NotNull KotlinType newType);
-
-    @NotNull
     @TypeRefinement
     TypeProjection refine(@NotNull KotlinTypeRefiner kotlinTypeRefiner);
 }

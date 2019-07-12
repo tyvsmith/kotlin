@@ -36,10 +36,6 @@ class StarProjectionImpl(
 
     override fun getType() = _type
 
-    override fun replaceType(newType: KotlinType): TypeProjection {
-        return TypeBasedStarProjectionImpl(newType)
-    }
-
     @TypeRefinement
     override fun refine(kotlinTypeRefiner: KotlinTypeRefiner): TypeProjection =
         TypeBasedStarProjectionImpl(kotlinTypeRefiner.refineType(type))
@@ -68,10 +64,6 @@ class TypeBasedStarProjectionImpl(
     override fun getProjectionKind() = Variance.OUT_VARIANCE
 
     override fun getType() = _type
-
-    override fun replaceType(newType: KotlinType): TypeProjection {
-        return TypeBasedStarProjectionImpl(newType)
-    }
 
     @TypeRefinement
     override fun refine(kotlinTypeRefiner: KotlinTypeRefiner): TypeProjection =
