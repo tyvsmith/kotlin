@@ -7,12 +7,10 @@ package org.jetbrains.kotlin.config
 
 import org.jetbrains.kotlin.builtins.isFunctionOrSuspendFunctionType
 import org.jetbrains.kotlin.descriptors.*
-import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.resolve.descriptorUtil.classId
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
-import org.jetbrains.kotlin.storage.NotNullLazyValue
 import org.jetbrains.kotlin.storage.StorageManager
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.checker.KotlinTypeRefiner
@@ -31,7 +29,7 @@ class KotlinTypeRefinerImpl(
         moduleDescriptor.getCapability(REFINER_CAPABILITY)?.value = this
     }
 
-    private val refinedTypeCache = storageManager.createRecursionTolerantCacheWithNotNullValues<KotlinType, KotlinType>()
+    private val refinedTypeCache = storageManager.createCacheWithNotNullValues<KotlinType, KotlinType>()
     private val _isRefinementNeededForTypeConstructor =
         storageManager.createMemoizedFunction<TypeConstructor, Boolean> { it.areThereExpectSupertypesOrTypeArguments() }
     private val scopes = storageManager.createCacheWithNotNullValues<ClassDescriptor, MemberScope>()
@@ -40,11 +38,7 @@ class KotlinTypeRefinerImpl(
     override fun refineType(type: KotlinType): KotlinType {
         return when {
             type.hasNotTrivialRefinementFactory -> {
-                val cached = refinedTypeCache.computeIfAbsent(
-                    key = type,
-                    computation = { type.refine(this) },
-                    onRecursive = { RefinedSimpleTypeWrapper(storageManager.createLazyValue { refineType(type) as SimpleType }) }
-                )
+                val cached = refinedTypeCache.computeIfAbsent(type) { type.refine(this) }
                 updateArgumentsAnnotationsIfNeeded(type, cached)
             }
 
@@ -143,26 +137,3 @@ private val TypeConstructor.allDependentTypeConstructors: Collection<TypeConstru
 
 private fun TypeConstructor.isExpectClass() =
     declarationDescriptor?.safeAs<ClassDescriptor>()?.isExpect == true
-
-private class RefinedSimpleTypeWrapper(private val _delegate: NotNullLazyValue<SimpleType>) : DelegatingSimpleType() {
-    override val delegate: SimpleType
-        get() = _delegate()
-
-    @TypeRefinement
-    override fun replaceDelegate(delegate: SimpleType): DelegatingSimpleType {
-        throw IllegalStateException("replaceDelegate should not be called on RefinedSimpleTypeWrapper")
-    }
-
-    override fun replaceAnnotations(newAnnotations: Annotations): SimpleType {
-        return delegate.replaceAnnotations(newAnnotations)
-    }
-
-    override fun makeNullableAsSpecified(newNullability: Boolean): SimpleType {
-        return delegate.makeNullableAsSpecified(newNullability)
-    }
-
-    @TypeRefinement
-    override fun refine(kotlinTypeRefiner: KotlinTypeRefiner): SimpleType {
-        return kotlinTypeRefiner.refineType(delegate) as SimpleType
-    }
-}
