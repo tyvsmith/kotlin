@@ -145,6 +145,8 @@ open class KotlinNativeTargetConfigurator(
     }
 
     private fun Project.createKlibCompilationTask(compilation: KotlinNativeCompilation) {
+        compilation.registerKotlinCompileTaskData(compilation.compileKotlinTaskName)
+
         val compileTask = tasks.create(
             compilation.compileKotlinTaskName,
             KotlinNativeCompile::class.java

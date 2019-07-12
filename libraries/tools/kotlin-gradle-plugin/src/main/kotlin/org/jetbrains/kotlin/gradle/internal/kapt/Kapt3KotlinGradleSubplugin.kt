@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.gradle.internal.kapt.incremental.CLASS_STRUCTURE_ART
 import org.jetbrains.kotlin.gradle.internal.kapt.incremental.StructureArtifactTransform
 import org.jetbrains.kotlin.gradle.model.builder.KaptModelBuilder
 import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.plugin.mpp.AbstractKotlinCompilation
 import org.jetbrains.kotlin.gradle.tasks.CompilerPluginOptions
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.isWorkerAPISupported
@@ -179,7 +180,7 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
         val javaCompile: AbstractCompile?,
         val kaptVariantData: KaptVariantData<*>?,
         val sourceSetName: String,
-        val kotlinCompilation: KotlinCompilation<*>?,
+        val kotlinCompilation: AbstractKotlinCompilation<*>?,
         val kaptExtension: KaptExtension,
         val kaptClasspathConfigurations: List<Configuration>
     ) {
@@ -233,7 +234,7 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
 
         val context = Kapt3SubpluginContext(
             project, kotlinCompile, javaCompile,
-            kaptVariantData, sourceSetName, kotlinCompilation, kaptExtension, nonEmptyKaptConfigurations
+            kaptVariantData, sourceSetName, kotlinCompilation as? AbstractKotlinCompilation<*>, kaptExtension, nonEmptyKaptConfigurations
         )
 
         val kaptGenerateStubsTask = context.createKaptGenerateStubsTask()
@@ -464,18 +465,23 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
     }
 
     private fun Kapt3SubpluginContext.createKaptGenerateStubsTask(): KaptGenerateStubsTask {
-        val kaptTask = project.tasks.create(
-            getKaptTaskName("kaptGenerateStubs"),
-            KaptGenerateStubsTask::class.java
-        )
+        val kaptTaskName = getKaptTaskName("kaptGenerateStubs")
 
-        kaptTask.sourceSetName = sourceSetName
+        kotlinCompile.compilation.registerKotlinCompileTaskData(kaptTaskName)
+
+        val kaptTask = project.tasks.create(
+            kaptTaskName,
+            KaptGenerateStubsTask::class.java
+        ).apply {
+            compilation = kotlinCompile.compilation
+        }
+
         kaptTask.kotlinCompileTask = kotlinCompile
         kotlinToKaptGenerateStubsTasksMap[kotlinCompile] = kaptTask
 
         kaptTask.stubsDir = getKaptStubsDir()
-        kaptTask.destinationDir = getKaptIncrementalDataDir()
         kaptTask.mapClasspath { kotlinCompile.classpath }
+        kaptTask.destinationDir = getKaptIncrementalDataDir()
         kaptTask.generatedSourcesDir = sourcesOutputDir
         PropertiesProvider(project).mapKotlinTaskProperties(kaptTask)
 
