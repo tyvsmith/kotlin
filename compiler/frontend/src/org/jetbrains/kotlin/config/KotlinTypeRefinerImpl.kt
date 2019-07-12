@@ -58,10 +58,10 @@ class KotlinTypeRefinerImpl(
         fun doReplace(original: KotlinType, cached: KotlinType): KotlinType {
             val newArguments = mutableListOf<TypeProjection>()
             for ((originalArg, cachedArg) in original.arguments zip cached.arguments) {
-                if (cachedArg.type.isError || TypeUtils.noExpectedType(cachedArg.type)) {
-                    newArguments += cachedArg
+                newArguments += if (cachedArg.type.isError || TypeUtils.noExpectedType(cachedArg.type)) {
+                    cachedArg
                 } else {
-                    newArguments += cachedArg.replaceType(doReplace(originalArg.type, cachedArg.type))
+                    cachedArg.replaceType(doReplace(originalArg.type, cachedArg.type))
                 }
             }
             return cached.replace(newArguments, original.annotations)
