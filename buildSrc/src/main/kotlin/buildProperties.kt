@@ -33,18 +33,15 @@ class KotlinBuildProperties(
 
     val isJpsBuildEnabled: Boolean = getBoolean("jpsBuild")
 
+    private val ideaVersion = Version(System.getProperty("idea.version"))
+
     val isInIdeaSync: Boolean = run {
         // "idea.sync.active" was introduced in 2019.1
         System.getProperty("idea.sync.active")?.toBoolean() == true || let {
             // before 2019.1 there is "idea.active" that was true only on sync,
             // but since 2019.1 "idea.active" present in task execution too.
             // So let's check Idea version
-            val majorIdeaVersion = System.getProperty("idea.version")
-                ?.split(".")
-                ?.getOrNull(0)
-            val isBeforeIdea2019 = majorIdeaVersion == null || majorIdeaVersion.toInt() < 2019
-
-            isBeforeIdea2019 && System.getProperty("idea.active")?.toBoolean() == true
+            ideaVersion <= Version("2019.0") && System.getProperty("idea.active")?.toBoolean() == true
         }
     }
 
@@ -57,9 +54,7 @@ class KotlinBuildProperties(
     val useBootstrapStdlib: Boolean
         get() = isInJpsBuildIdeaSync || getBoolean("kotlin.build.useBootstrapStdlib", false)
 
-    val kotlinUltimateExists: Boolean = propertiesProvider.rootProjectDir.resolve("kotlin-ultimate").exists()
-
-    val includeCidrPlugins: Boolean = kotlinUltimateExists && getBoolean("cidrPluginsEnabled")
+    private val kotlinUltimateExists: Boolean = propertiesProvider.rootProjectDir.resolve("kotlin-ultimate").exists()
 
     val isTeamcityBuild: Boolean = getBoolean("teamcity") || System.getenv("TEAMCITY_VERSION") != null
 
@@ -71,6 +66,12 @@ class KotlinBuildProperties(
             }
             return kotlinUltimateExists && (explicitlyEnabled || isTeamcityBuild)
         }
+
+    val includeCidrPlugins: Boolean = kotlinUltimateExists && getBoolean("cidrPluginsEnabled")
+
+    val includeUltimate: Boolean = kotlinUltimateExists && (isTeamcityBuild || intellijUltimateEnabled)
+
+    val supportsNativeDebug: Boolean = includeCidrPlugins || (includeUltimate && Version("2019.2") <= ideaVersion)
 
     val postProcessing: Boolean get() = isTeamcityBuild || getBoolean("kotlin.build.postprocessing", true)
 
@@ -113,3 +114,14 @@ val Settings.kotlinBuildProperties: KotlinBuildProperties
         ?: KotlinBuildProperties(SettingsProperties(this)).also {
             extensions.add(extensionName, it)
         }
+
+private class Version(version: String?) : Comparable<Version> {
+    private val major: Int? = version?.split(".")?.getOrNull(0)?.toInt()
+    private val minor: Int? = version?.split(".")?.getOrNull(1)?.toInt()
+    override fun compareTo(other: Version) = when {
+        listOf(major, minor, other.major, other.minor).contains(null) -> 0
+        this.major != other.major -> this.major!! - other.major!!
+        this.minor != other.minor -> this.minor!! - other.minor!!
+        else -> 0
+    }
+}

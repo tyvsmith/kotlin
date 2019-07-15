@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.gradle
 
+import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import org.jetbrains.plugins.gradle.model.ExternalDependency
 import org.jetbrains.plugins.gradle.model.ModelFactory
 import java.io.File
@@ -119,7 +120,7 @@ enum class KotlinPlatform(val id: String) {
     }
 }
 
-interface KotlinPlatformContainer: Serializable {
+interface KotlinPlatformContainer : Serializable {
     val platforms: Collection<KotlinPlatform>
 
     fun supports(simplePlatform: KotlinPlatform): Boolean
@@ -142,6 +143,7 @@ interface KotlinTarget : Serializable {
     val compilations: Collection<KotlinCompilation>
     val testTasks: Collection<KotlinTestTask>
     val jar: KotlinTargetJar?
+    val konanArtifacts: List<KonanArtifactModel>
 
     companion object {
         const val METADATA_TARGET_NAME = "metadata"
@@ -166,5 +168,30 @@ interface KotlinMPPGradleModel : Serializable {
 
     companion object {
         const val NO_KOTLIN_NATIVE_HOME = ""
+    }
+}
+
+interface KonanArtifactModel : Serializable {
+    val targetName: String
+    val executableName: String
+    val type: CompilerOutputKind
+    val targetPlatform: String
+    val file: File
+    val buildTaskPath: String
+    val runConfiguration: KonanRunConfigurationModel
+    val isTests: Boolean
+}
+
+interface KonanRunConfigurationModel : Serializable {
+    val workingDirectory: String
+    val programParameters: List<String>
+    val environmentVariables: Map<String, String>
+
+    fun isNotEmpty() = workingDirectory.isNotEmpty() || programParameters.isNotEmpty() || environmentVariables.isNotEmpty()
+
+    companion object {
+        const val NO_WORKING_DIRECTORY = ""
+        val NO_PROGRAM_PARAMETERS = emptyList<String>()
+        val NO_ENVIRONMENT_VARIABLES = emptyMap<String, String>()
     }
 }
