@@ -17,7 +17,6 @@
 package org.jetbrains.kotlin.types
 
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.TypeAliasDescriptor
 import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
@@ -78,11 +77,10 @@ object KotlinTypeFactory {
             annotations, constructor, arguments, nullable,
             computeMemberScope(constructor, arguments, kotlinTypeRefiner)
         ) f@{ refiner ->
-            val refinedArguments = arguments.map { it.refine(refiner) }
-            val expandedTypeOrRefinedConstructor = refineConstructor(constructor, refiner, refinedArguments) ?: return@f null
+            val expandedTypeOrRefinedConstructor = refineConstructor(constructor, refiner, arguments) ?: return@f null
             expandedTypeOrRefinedConstructor.expandedType?.let { return@f it }
 
-            simpleType(annotations, expandedTypeOrRefinedConstructor.refinedConstructor!!, refinedArguments, nullable, refiner)
+            simpleType(annotations, expandedTypeOrRefinedConstructor.refinedConstructor!!, arguments, nullable, refiner)
         }
     }
 
@@ -103,7 +101,7 @@ object KotlinTypeFactory {
         val descriptor = basicDescriptor?.let { kotlinTypeRefiner.refineDescriptor(it) } ?: return null
 
         if (descriptor is TypeAliasDescriptor) {
-            return ExpandedTypeOrRefinedConstructor(descriptor.computeExpandedType(arguments).getAbbreviation(), null)
+            return ExpandedTypeOrRefinedConstructor(descriptor.computeExpandedType(arguments), null)
         }
 
         val refinedConstructor = descriptor.typeConstructor.refine(kotlinTypeRefiner) ?: descriptor.typeConstructor
@@ -125,12 +123,10 @@ object KotlinTypeFactory {
             val expandedTypeOrRefinedConstructor = refineConstructor(constructor, kotlinTypeRefiner, arguments) ?: return@SimpleTypeImpl null
             expandedTypeOrRefinedConstructor.expandedType?.let { return@SimpleTypeImpl it }
 
-            val refinedArguments = arguments.map { it.refine(kotlinTypeRefiner) }
-
             simpleTypeWithNonTrivialMemberScope(
                 annotations,
                 expandedTypeOrRefinedConstructor.refinedConstructor!!,
-                refinedArguments,
+                arguments,
                 nullable,
                 memberScope
             )

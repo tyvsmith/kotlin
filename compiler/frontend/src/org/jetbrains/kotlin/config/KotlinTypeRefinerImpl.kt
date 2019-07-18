@@ -5,66 +5,80 @@
 
 package org.jetbrains.kotlin.config
 
-import org.jetbrains.kotlin.builtins.isFunctionOrSuspendFunctionType
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.resolve.descriptorUtil.classId
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
 import org.jetbrains.kotlin.storage.StorageManager
-import org.jetbrains.kotlin.types.*
+import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.TypeConstructor
 import org.jetbrains.kotlin.types.checker.KotlinTypeRefiner
 import org.jetbrains.kotlin.types.checker.NewCapturedTypeConstructor
 import org.jetbrains.kotlin.types.checker.REFINER_CAPABILITY
 import org.jetbrains.kotlin.types.refinement.TypeRefinement
+import org.jetbrains.kotlin.types.replace
 import org.jetbrains.kotlin.utils.DFS
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 @UseExperimental(TypeRefinement::class)
 class KotlinTypeRefinerImpl(
     private val moduleDescriptor: ModuleDescriptor,
-    private val storageManager: StorageManager
+    storageManager: StorageManager
 ) : KotlinTypeRefiner() {
     init {
         moduleDescriptor.getCapability(REFINER_CAPABILITY)?.value = this
     }
 
-    private val refinedTypeCache = storageManager.createCacheWithNotNullValues<KotlinType, KotlinType>()
-    private val _isRefinementNeededForTypeConstructor =
-        storageManager.createMemoizedFunction<TypeConstructor, Boolean> { it.areThereExpectSupertypesOrTypeArguments() }
+    private val refinedTypeCache = storageManager.createCacheWithNotNullValues<TypeConstructor, KotlinType>()
+    private val isRefinementNeededForTypeConstructorCache = storageManager.createCacheWithNotNullValues<ClassifierDescriptor, Boolean>()
     private val scopes = storageManager.createCacheWithNotNullValues<ClassDescriptor, MemberScope>()
 
+    /**
+     * IMPORTANT: that function has not obvious contract: it refines only supertypes,
+     *   and don't refines type arguments, so return type is "partly refined".
+     *
+     *   It's fine for subtyping, because we refine type arguments inside type checker when it needs to
+     *   It's fine for scopes, because we refine type of every expression:
+     *
+     *   // common module
+     *   expect interface A
+     *   class Inv<T>(val value: T)
+     *   fun getA(): Inv<A> = ...
+     *
+     *   // platform module
+     *
+     *   actual interface A {
+     *       val x: Int
+     *   }
+     *
+     *   fun foo() {
+     *      getA().value.x
+     *   }
+     *
+     *   Let's call type of `actual interface A` A'
+     *
+     *   expression `getA()` has not refined type Inv<A> and same refined type
+     *   expression `getA().value` has not refined type A that refines into type A', so there is a
+     *     field `x` in it's member scope
+     */
     @TypeRefinement
     override fun refineType(type: KotlinType): KotlinType {
         return when {
-            type.hasNotTrivialRefinementFactory -> {
-                val cached = refinedTypeCache.computeIfAbsent(type) { type.refine(this) }
-                updateArgumentsAnnotationsIfNeeded(type, cached)
+            !type.needsRefinement() -> type
+            type.canBeCached() -> {
+                val cached = refinedTypeCache.computeIfAbsent(type.constructor) {
+                    type.constructor.declarationDescriptor!!.defaultType.refine(this)
+                }
+                cached.replace(type.arguments)
             }
-
             else -> type.refine(this)
         }
     }
 
-    private fun updateArgumentsAnnotationsIfNeeded(originalType: KotlinType, cachedType: KotlinType): KotlinType {
-        if (!originalType.isArgumentsAnnotationsUpdateNeeded()) return cachedType
+    private fun KotlinType.needsRefinement(): Boolean = isRefinementNeededForTypeConstructor(constructor)
 
-        fun doReplace(original: KotlinType, cached: KotlinType): KotlinType {
-            val newArguments = mutableListOf<TypeProjection>()
-            for ((originalArg, cachedArg) in original.arguments zip cached.arguments) {
-                newArguments += when {
-                    originalArg.isStarProjection -> originalArg
-                    cachedArg.type.isError -> cachedArg
-                    else -> TypeProjectionImpl(originalArg.projectionKind, doReplace(originalArg.type, cachedArg.type))
-                }
-            }
-            return cached.replace(newArguments, original.annotations)
-        }
-
-        return doReplace(originalType, cachedType)
-    }
-
-    private fun KotlinType.isArgumentsAnnotationsUpdateNeeded(): Boolean = isFunctionOrSuspendFunctionType
+    private fun KotlinType.canBeCached(): Boolean = hasNotTrivialRefinementFactory && constructor.declarationDescriptor != null
 
     @TypeRefinement
     override fun refineSupertypes(classDescriptor: ClassDescriptor): Collection<KotlinType> {
@@ -92,7 +106,8 @@ class KotlinTypeRefinerImpl(
 
     @TypeRefinement
     override fun isRefinementNeededForTypeConstructor(typeConstructor: TypeConstructor): Boolean {
-        return _isRefinementNeededForTypeConstructor.invoke(typeConstructor)
+        val owner = typeConstructor.declarationDescriptor ?: return typeConstructor.areThereExpectSupertypes()
+        return isRefinementNeededForTypeConstructorCache.computeIfAbsent(owner) { typeConstructor.areThereExpectSupertypes() }
     }
 
     @TypeRefinement
@@ -101,7 +116,7 @@ class KotlinTypeRefinerImpl(
         return scopes.computeIfAbsent(classDescriptor, compute) as S
     }
 
-    private fun TypeConstructor.areThereExpectSupertypesOrTypeArguments(): Boolean {
+    private fun TypeConstructor.areThereExpectSupertypes(): Boolean {
         var result = false
         DFS.dfs(
             listOf(this),
@@ -132,7 +147,7 @@ private val TypeConstructor.allDependentTypeConstructors: Collection<TypeConstru
         is NewCapturedTypeConstructor -> {
             supertypes.map { it.constructor } + projection.type.constructor
         }
-        else -> supertypes.map { it.constructor } + parameters.map { it.typeConstructor }
+        else -> supertypes.map { it.constructor }
     }
 
 private fun TypeConstructor.isExpectClass() =

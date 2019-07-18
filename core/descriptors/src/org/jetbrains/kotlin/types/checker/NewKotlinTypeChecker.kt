@@ -27,7 +27,6 @@ import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.AbstractNullabilityChecker.hasNotNullSupertype
 import org.jetbrains.kotlin.types.AbstractTypeCheckerContext.SupertypesPolicy
 import org.jetbrains.kotlin.types.model.CaptureStatus
-import org.jetbrains.kotlin.types.refinement.TypeRefinement
 import org.jetbrains.kotlin.types.typeUtil.makeNullable
 
 object SimpleClassicTypeSystemContext : ClassicTypeSystemContext
@@ -72,19 +71,12 @@ interface NewKotlinTypeChecker : KotlinTypeChecker {
 class NewKotlinTypeCheckerImpl(override val kotlinTypeRefiner: KotlinTypeRefiner) : NewKotlinTypeChecker {
     override val overridingUtil: OverridingUtil = OverridingUtil.createWithTypeRefiner(kotlinTypeRefiner)
 
-    @UseExperimental(TypeRefinement::class)
     override fun isSubtypeOf(subtype: KotlinType, supertype: KotlinType): Boolean =
-        ClassicTypeCheckerContext(true).isSubtypeOf(
-            kotlinTypeRefiner.refineType(subtype.unwrap()).unwrap(),
-            kotlinTypeRefiner.refineType(supertype.unwrap()).unwrap()
-        ) // todo fix flag errorTypeEqualsToAnything
+        ClassicTypeCheckerContext(true, kotlinTypeRefiner = kotlinTypeRefiner)
+            .isSubtypeOf(subtype.unwrap(), supertype.unwrap()) // todo fix flag errorTypeEqualsToAnything
 
-    @UseExperimental(TypeRefinement::class)
     override fun equalTypes(a: KotlinType, b: KotlinType): Boolean =
-        ClassicTypeCheckerContext(false).equalTypes(
-            kotlinTypeRefiner.refineType(a.unwrap()).unwrap(),
-            kotlinTypeRefiner.refineType(b.unwrap()).unwrap()
-        )
+        ClassicTypeCheckerContext(false, kotlinTypeRefiner = kotlinTypeRefiner).equalTypes(a.unwrap(), b.unwrap())
 
     fun ClassicTypeCheckerContext.equalTypes(a: UnwrappedType, b: UnwrappedType): Boolean {
         return AbstractTypeChecker.equalTypes(this as AbstractTypeCheckerContext, a, b)

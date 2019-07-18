@@ -140,20 +140,20 @@ class ConstraintInjector(
             return baseContext.prepareType(type)
         }
 
-        @TypeRefinement
-        private fun KotlinTypeMarker.refineType(): KotlinTypeMarker = if (this is KotlinType) {
-            kotlinTypeRefiner.refineType(this)
-        } else {
-            this
+        @UseExperimental(TypeRefinement::class)
+        override fun refineType(type: KotlinTypeMarker): KotlinTypeMarker {
+            return if (type is KotlinType) {
+                kotlinTypeRefiner.refineType(type)
+            } else {
+                type
+            }
         }
 
-        @UseExperimental(TypeRefinement::class)
         fun runIsSubtypeOf(lowerType: KotlinTypeMarker, upperType: KotlinTypeMarker) {
-            val refinedLowerType = lowerType.refineType()
-            val refinedUpperType = upperType.refineType()
-            if (!AbstractTypeChecker.isSubtypeOf(this@TypeCheckerContext as AbstractTypeCheckerContext, refinedLowerType, refinedUpperType)) {
+            if (!AbstractTypeChecker.isSubtypeOf(this@TypeCheckerContext as AbstractTypeCheckerContext, lowerType, upperType)) {
                 // todo improve error reporting -- add information about base types
-                c.addError(NewConstraintError(refinedLowerType, refinedUpperType, position))
+                c.addError(NewConstraintError(lowerType, upperType, position))
+                AbstractTypeChecker.isSubtypeOf(this@TypeCheckerContext as AbstractTypeCheckerContext, lowerType, upperType)
             }
         }
 
