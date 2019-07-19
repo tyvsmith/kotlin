@@ -17,7 +17,6 @@ import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtElement
-import org.jetbrains.kotlin.resolve.jvm.AsmTypes
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_SYNTHETIC_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.STRICTFP_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.SYNCHRONIZED_ANNOTATION_FQ_NAME
@@ -41,7 +40,7 @@ open class FunctionCodegen(
         try {
             doGenerate()
         } catch (e: Throwable) {
-            throw RuntimeException("${e.message} while generating code for:\n${irFunction.dump()}", e)
+            throw RuntimeException("Exception while generating code for:\n${irFunction.dump()}", e)
         }
 
     private fun doGenerate(): JvmMethodGenericSignature {
