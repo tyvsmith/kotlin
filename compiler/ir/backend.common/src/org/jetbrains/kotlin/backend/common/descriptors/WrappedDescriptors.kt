@@ -395,9 +395,7 @@ open class WrappedSimpleFunctionDescriptor(
     }
 
     val extensionReceiver by lazy {
-        owner.extensionReceiverParameter?.let {
-            ReceiverParameterDescriptorImpl(this, ExtensionReceiver(it.descriptor, it.type.toKotlinType(), null), Annotations.EMPTY)
-        }
+        owner.extensionReceiverParameter?.descriptor as? ReceiverParameterDescriptor
     }
 
     override fun getExtensionReceiverParameter() = extensionReceiver
