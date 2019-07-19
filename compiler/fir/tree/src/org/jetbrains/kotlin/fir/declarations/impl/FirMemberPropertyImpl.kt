@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.FirPropertyAccessor
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.FirWrappedDelegateExpression
 import org.jetbrains.kotlin.fir.symbols.impl.FirBackingFieldSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirDelegateFieldSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
@@ -38,7 +39,7 @@ class FirMemberPropertyImpl(
     returnTypeRef: FirTypeRef,
     override val isVar: Boolean,
     override var initializer: FirExpression?,
-    override var delegate: FirExpression?
+    override var delegate: FirWrappedDelegateExpression?
 ) : FirAbstractCallableMember<FirProperty>(
     session, psi, name, visibility, modality, isExpect, isActual, isOverride, receiverTypeRef, returnTypeRef
 ), FirProperty, FirModifiableAccessorsOwner {

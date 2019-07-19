@@ -21,7 +21,7 @@ interface FirVariable<F : FirVariable<F>> :
 
     val initializer: FirExpression?
 
-    val delegate: FirExpression?
+    val delegate: FirWrappedDelegateExpression?
 
     override val symbol: FirVariableSymbol<F>
 

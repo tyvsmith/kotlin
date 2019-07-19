@@ -625,6 +625,14 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         print("${constExpression.kind}(${constExpression.value})")
     }
 
+    override fun visitWrappedDelegateExpression(wrappedDelegateExpression: FirWrappedDelegateExpression) {
+        if (wrappedDelegateExpression.useDelegateProvider) {
+            wrappedDelegateExpression.delegateProvider.accept(this)
+        } else {
+            wrappedDelegateExpression.expression.accept(this)
+        }
+    }
+
     override fun visitNamedArgumentExpression(namedArgumentExpression: FirNamedArgumentExpression) {
         print(namedArgumentExpression.name)
         print(" = ")

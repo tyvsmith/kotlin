@@ -1223,4 +1223,12 @@ internal class Fir2IrVisitor(
         }
         return super.visitResolvedQualifier(resolvedQualifier, data)
     }
+
+    override fun visitWrappedDelegateExpression(wrappedDelegateExpression: FirWrappedDelegateExpression, data: Any?): IrElement {
+        return if (wrappedDelegateExpression.useDelegateProvider) {
+            wrappedDelegateExpression.delegateProvider.toIrExpression()
+        } else {
+            wrappedDelegateExpression.expression.toIrExpression()
+        }
+    }
 }

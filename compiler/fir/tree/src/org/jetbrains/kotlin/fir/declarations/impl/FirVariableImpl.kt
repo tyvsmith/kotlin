@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.FirPropertyAccessor
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirVariable
+import org.jetbrains.kotlin.fir.expressions.FirWrappedDelegateExpression
 import org.jetbrains.kotlin.fir.symbols.impl.FirDelegateFieldSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.fir.transformInplace
@@ -28,7 +29,7 @@ class FirVariableImpl(
     override val isVar: Boolean,
     override var initializer: FirExpression?,
     override val symbol: FirVariableSymbol<FirVariableImpl> = FirVariableSymbol(name),
-    override var delegate: FirExpression? = null
+    override var delegate: FirWrappedDelegateExpression? = null
 ) : FirAbstractNamedAnnotatedDeclaration(session, psiElement, name), FirVariable<FirVariableImpl>, FirModifiableAccessorsOwner {
 
     override val delegateFieldSymbol: FirDelegateFieldSymbol<FirVariableImpl>? =

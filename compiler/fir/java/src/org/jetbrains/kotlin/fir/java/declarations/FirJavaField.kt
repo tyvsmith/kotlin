@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirField
 import org.jetbrains.kotlin.fir.declarations.impl.FirAbstractCallableMember
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.FirWrappedDelegateExpression
 import org.jetbrains.kotlin.fir.symbols.impl.FirDelegateFieldSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFieldSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
@@ -36,7 +37,7 @@ class FirJavaField(
         symbol.bind(this)
     }
 
-    override val delegate: FirExpression?
+    override val delegate: FirWrappedDelegateExpression?
         get() = null
 
     override val initializer: FirExpression?
