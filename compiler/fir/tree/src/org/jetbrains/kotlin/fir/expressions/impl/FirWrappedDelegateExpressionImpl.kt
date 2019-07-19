@@ -37,4 +37,10 @@ class FirWrappedDelegateExpressionImpl(
 
         return super.transformChildren(transformer, data)
     }
+
+    override fun <D> transformChildrenOnce(transformer: FirTransformer<D>, data: D): FirElement {
+        delegateProvider = delegateProvider.transformSingle(transformer, data)
+
+        return super.transformChildren(transformer, data)
+    }
 }

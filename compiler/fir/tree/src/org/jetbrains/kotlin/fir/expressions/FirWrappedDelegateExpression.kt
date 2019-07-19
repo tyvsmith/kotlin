@@ -6,8 +6,10 @@
 package org.jetbrains.kotlin.fir.expressions
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.types.FirTypeRef
+import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.FirVisitor
 
 abstract class FirWrappedDelegateExpression(
@@ -29,4 +31,6 @@ abstract class FirWrappedDelegateExpression(
         delegateProvider.accept(visitor, data)
         super.acceptChildren(visitor, data)
     }
+
+    abstract fun <D> transformChildrenOnce(transformer: FirTransformer<D>, data: D): FirElement
 }

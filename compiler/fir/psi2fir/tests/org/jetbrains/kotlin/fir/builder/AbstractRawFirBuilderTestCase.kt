@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirRenderer
 import org.jetbrains.kotlin.fir.FirSessionBase
 import org.jetbrains.kotlin.fir.declarations.FirFile
+import org.jetbrains.kotlin.fir.expressions.FirWrappedDelegateExpression
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
@@ -130,8 +131,10 @@ abstract class AbstractRawFirBuilderTestCase : KtParsingTestCase(
                     val elementDump = StringBuilder().also { element.accept(FirRenderer(it)) }.toString()
                     throw AssertionError("FirElement ${element.javaClass} is visited twice: $elementDump")
                 }
-            } else {
+            } else if (element !is FirWrappedDelegateExpression) {
                 element.acceptChildren(this)
+            } else {
+                element.delegateProvider.accept(this)
             }
         }
     }
@@ -145,8 +148,10 @@ abstract class AbstractRawFirBuilderTestCase : KtParsingTestCase(
                     val elementDump = StringBuilder().also { element.accept(FirRenderer(it)) }.toString()
                     throw AssertionError("FirElement ${element.javaClass} is visited twice: $elementDump")
                 }
-            } else {
+            } else if (element !is FirWrappedDelegateExpression) {
                 element.transformChildren(this, Unit)
+            } else {
+                element.transformChildrenOnce(this, Unit)
             }
             return CompositeTransformResult.single(element)
         }
