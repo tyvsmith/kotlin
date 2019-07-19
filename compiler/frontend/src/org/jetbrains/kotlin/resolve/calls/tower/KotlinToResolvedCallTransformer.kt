@@ -156,6 +156,9 @@ class KotlinToResolvedCallTransformer(
         tracingStrategy: TracingStrategy
     ) {
         if (baseResolvedCall is CompletedCallResolutionResult) {
+            if (context.trace.toString() == "Trace for checking set function") {
+                return
+            }
             context.inferenceSession.addCompletedCallInfo(PSICompletedCallInfo(baseResolvedCall, context, resolvedCall, tracingStrategy))
         }
     }
