@@ -39,12 +39,16 @@ class FirSupertypeResolverTransformer : FirAbstractTreeTransformer() {
         val transformedClass = resolveSupertypesOrExpansions(regularClass) as? FirRegularClass ?: regularClass
 
         // resolve supertypes for nested classes
-        return super.transformRegularClass(transformedClass, data)
+        val result = super.transformRegularClass(transformedClass, data)
+        transformedClass.resolveStage = FirResolveStage.SUPER_TYPES
+        return result
     }
 
 
     override fun transformTypeAlias(typeAlias: FirTypeAlias, data: Nothing?): CompositeTransformResult<FirDeclaration> {
-        return resolveSupertypesOrExpansions(typeAlias).compose()
+        val result = resolveSupertypesOrExpansions(typeAlias)
+        result.resolveStage = FirResolveStage.SUPER_TYPES
+        return result.compose()
     }
 
     // This and transformProperty functions are required to forbid supertype resolving for local classes
@@ -52,10 +56,12 @@ class FirSupertypeResolverTransformer : FirAbstractTreeTransformer() {
         declarationWithBody: FirDeclarationWithBody,
         data: Nothing?
     ): CompositeTransformResult<FirDeclaration> {
+        declarationWithBody.resolveStage = FirResolveStage.SUPER_TYPES
         return declarationWithBody.compose()
     }
 
     override fun transformProperty(property: FirProperty, data: Nothing?): CompositeTransformResult<FirDeclaration> {
+        property.resolveStage = FirResolveStage.SUPER_TYPES
         return property.compose()
     }
 
