@@ -8,14 +8,13 @@ package org.jetbrains.kotlin.idea.fir
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.FirCallableMemberDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirResolveStage
 import org.jetbrains.kotlin.fir.declarations.FirTypedDeclaration
 import org.jetbrains.kotlin.fir.java.FirJavaModuleBasedSession
 import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.resolve.FirProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
-import org.jetbrains.kotlin.fir.resolve.transformers.FirImportResolveTransformer
-import org.jetbrains.kotlin.fir.resolve.transformers.FirStatusResolveTransformer
-import org.jetbrains.kotlin.fir.resolve.transformers.FirTypeResolveTransformer
+import org.jetbrains.kotlin.fir.resolve.transformers.*
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirTopLevelDeclaredMemberScope
 import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
@@ -33,24 +32,33 @@ import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
 
-enum class FirStage(val index: Int, val stubMode: Boolean) {
-    // Just build FIR without resolve and without function bodies
-    BUILD_ONLY(index = 0, stubMode = true) {
-        override val transformers: List<FirTransformer<Nothing?>>
-            get() = emptyList()
-    },
-    // Build FIR for declarations without function bodies, resolve imports, explicit types, visibility & modality
-    DECLARATIONS(index = 3, stubMode = true) {
-        override val transformers: List<FirTransformer<Nothing?>>
-            get() = listOf(
-                FirImportResolveTransformer(),
-                FirTypeResolveTransformer(),
-                FirStatusResolveTransformer()
-            )
-    };
+private val resolveStageToTransformerMap = mutableMapOf(
+    FirResolveStage.RAW_FIR to emptyList(),
+    FirResolveStage.SUPER_TYPES to listOf(
+        FirImportResolveTransformer(),
+        FirSupertypeResolverTransformer()
+    ),
+    FirResolveStage.DECLARATIONS to listOf(
+        FirImportResolveTransformer(),
+        FirSupertypeResolverTransformer(),
+        FirTypeResolveTransformer(),
+        FirStatusResolveTransformer()
+    ),
+    FirResolveStage.EXPRESSIONS to listOf(
+        FirImportResolveTransformer(),
+        FirSupertypeResolverTransformer(),
+        FirTypeResolveTransformer(),
+        FirStatusResolveTransformer(),
+        FirImplicitTypeBodyResolveTransformerAdapter(),
+        FirBodyResolveTransformerAdapter()
+    )
+)
 
-    abstract val transformers: List<FirTransformer<Nothing?>>
-}
+private val FirResolveStage.stubMode: Boolean
+    get() = this != FirResolveStage.EXPRESSIONS
+
+private val FirResolveStage.transformers: List<FirTransformer<Nothing?>>
+    get() = resolveStageToTransformerMap[this] ?: emptyList()
 
 private fun KtClassOrObject.relativeFqName(): FqName {
     val className = this.nameAsSafeName
@@ -68,7 +76,7 @@ val KtElement.session: FirSession
         )
     }
 
-fun KtCallableDeclaration.getOrBuildFir(stage: FirStage = FirStage.DECLARATIONS): FirCallableMemberDeclaration<*> {
+fun KtCallableDeclaration.getOrBuildFir(stage: FirResolveStage = FirResolveStage.DECLARATIONS): FirCallableMemberDeclaration<*> {
     val session = this.session
 
     val file = this.containingKtFile
@@ -79,8 +87,8 @@ fun KtCallableDeclaration.getOrBuildFir(stage: FirStage = FirStage.DECLARATIONS)
     val firProvider = FirProvider.getInstance(session) as FirProviderImpl
     // TODO: minor file modifications should not force full rebuild (!)
     var cachedOrNewFirFile = firProvider.getFirFilesByPackage(packageFqName).find { it.psi == file }
-    // TODO: stage of cached FIR should be taken into account (!)
-    if (cachedOrNewFirFile == null) {
+    if (cachedOrNewFirFile == null || cachedOrNewFirFile.resolveStage < FirResolveStage.DECLARATIONS) {
+        // TODO: when we are at some resolve stage, we can omit stages which are already done
         println("FIR resolution: start transformation of ${file.name}")
         val builder = RawFirBuilder(session, stubMode = stage.stubMode)
         val firFile = builder.buildFirFile(file)
