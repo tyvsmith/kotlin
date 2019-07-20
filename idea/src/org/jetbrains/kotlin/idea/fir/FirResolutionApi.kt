@@ -5,12 +5,15 @@
 
 package org.jetbrains.kotlin.idea.fir
 
+import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.FirCallableMemberDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirResolveStage
 import org.jetbrains.kotlin.fir.declarations.FirTypedDeclaration
+import org.jetbrains.kotlin.fir.dependenciesWithoutSelf
 import org.jetbrains.kotlin.fir.java.FirJavaModuleBasedSession
+import org.jetbrains.kotlin.fir.java.FirLibrarySession
 import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.resolve.FirProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
@@ -22,8 +25,11 @@ import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
+import org.jetbrains.kotlin.idea.caches.project.IdeaModuleInfo
 import org.jetbrains.kotlin.idea.caches.project.ModuleSourceInfo
 import org.jetbrains.kotlin.idea.caches.project.getModuleInfo
+import org.jetbrains.kotlin.idea.caches.project.isLibraryClasses
+import org.jetbrains.kotlin.idea.caches.resolve.IDEPackagePartProvider
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtCallableDeclaration
@@ -31,6 +37,7 @@ import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
+import org.jetbrains.kotlin.utils.addToStdlib.cast
 
 private val resolveStageToTransformerMap = mutableMapOf(
     FirResolveStage.RAW_FIR to emptyList(),
@@ -66,14 +73,25 @@ private fun KtClassOrObject.relativeFqName(): FqName {
     return parentFqName?.child(className) ?: FqName.topLevel(className)
 }
 
+private fun createLibrarySession(moduleInfo: IdeaModuleInfo, project: Project, provider: FirProjectSessionProvider): FirLibrarySession {
+    val contentScope = moduleInfo.contentScope()
+    return FirLibrarySession.create(moduleInfo, provider, contentScope, project, IDEPackagePartProvider(contentScope))
+}
+
 val KtElement.session: FirSession
     get() {
         val moduleInfo = this.getModuleInfo() as ModuleSourceInfo
         val sessionProvider = FirProjectSessionProvider(project)
         return sessionProvider.getSession(moduleInfo) ?: FirJavaModuleBasedSession(
-            moduleInfo, sessionProvider, moduleInfo.contentScope(),
-            IdeFirDependenciesSymbolProvider(moduleInfo, project, sessionProvider)
-        )
+            moduleInfo, sessionProvider, moduleInfo.contentScope()
+        ).also {
+            val ideaModuleInfo = moduleInfo.cast<IdeaModuleInfo>()
+            ideaModuleInfo.dependenciesWithoutSelf().forEach {
+                if (it is IdeaModuleInfo && it.isLibraryClasses()) {
+                    createLibrarySession(it, project, sessionProvider)
+                }
+            }
+        }
     }
 
 fun KtCallableDeclaration.getOrBuildFir(stage: FirResolveStage = FirResolveStage.DECLARATIONS): FirCallableMemberDeclaration<*> {

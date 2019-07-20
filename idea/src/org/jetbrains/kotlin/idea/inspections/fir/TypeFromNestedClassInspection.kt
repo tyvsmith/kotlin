@@ -15,7 +15,6 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
 import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.idea.fir.coneTypeSafe
 import org.jetbrains.kotlin.idea.fir.getOrBuildFir
-import org.jetbrains.kotlin.idea.fir.session
 import org.jetbrains.kotlin.idea.inspections.AbstractKotlinInspection
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.namedFunctionVisitor
@@ -29,7 +28,7 @@ class TypeFromNestedClassInspection : AbstractKotlinInspection() {
             val firFunctionId = (firFunction.symbol as? FirFunctionSymbol)?.callableId ?: return
 
             val coneType = firFunction.coneTypeSafe as? ConeClassLikeType ?: return
-            val typeId = (coneType.lookupTag.toSymbol(function.session) as? ConeClassSymbol)?.classId ?: return
+            val typeId = (coneType.lookupTag.toSymbol(firFunction.session) as? ConeClassSymbol)?.classId ?: return
 
             if (firFunctionId.packageName != typeId.packageFqName) return
             val functionClassName = firFunctionId.className ?: return
