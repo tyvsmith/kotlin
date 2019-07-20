@@ -313,8 +313,7 @@ class QualifiedReceiverTowerLevel(session: FirSession) : SessionBasedTowerLevel(
         val scope = FirExplicitSimpleImportingScope(
             listOf(
                 FirResolvedImportImpl(
-                    session,
-                    FirImportImpl(session, null, FqName.topLevel(name), false, null),
+                    FirImportImpl(null, FqName.topLevel(name), false, null),
                     qualifiedReceiver.packageFqName,
                     qualifiedReceiver.relativeClassFqName
                 )
@@ -935,9 +934,8 @@ class InvokeReceiverCandidateCollector(
             val session = components.session
             val boundInvokeCallInfo = CallInfo(
                 invokeCallInfo.callKind,
-                FirQualifiedAccessExpressionImpl(session, null, false).apply {
+                FirQualifiedAccessExpressionImpl(null, false).apply {
                     calleeReference = FirNamedReferenceWithCandidate(
-                        session,
                         null,
                         (candidate.symbol as ConeCallableSymbol).callableId.callableName,
                         candidate
