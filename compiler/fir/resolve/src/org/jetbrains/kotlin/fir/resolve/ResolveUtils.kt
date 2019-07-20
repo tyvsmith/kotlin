@@ -165,5 +165,5 @@ fun FirFunction.constructFunctionalTypeRef(session: FirSession): FirResolvedType
     val functionalTypeId = StandardClassIds.byName("Function${receiverAndParameterTypes.size - 1}")
     val functionalType = functionalTypeId(session.service()).constructType(receiverAndParameterTypes.toTypedArray(), isNullable = false)
 
-    return FirResolvedTypeRefImpl(session, psi, functionalType)
+    return FirResolvedTypeRefImpl(psi, functionalType)
 }

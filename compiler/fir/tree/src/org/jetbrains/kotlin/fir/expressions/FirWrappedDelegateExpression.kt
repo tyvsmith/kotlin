@@ -7,15 +7,11 @@ package org.jetbrains.kotlin.fir.expressions
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.FirVisitor
 
-abstract class FirWrappedDelegateExpression(
-    session: FirSession,
-    psi: PsiElement?
-) : FirWrappedExpression(session, psi) {
+abstract class FirWrappedDelegateExpression(psi: PsiElement?) : FirWrappedExpression(psi) {
     abstract val delegateProvider: FirExpression
 
     abstract val useDelegateProvider: Boolean

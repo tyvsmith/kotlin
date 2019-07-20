@@ -181,7 +181,7 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider(
                     ).apply klass@{
                         typeParameters.addAll((1..arity).map {
                             FirTypeParameterImpl(
-                                session,
+                                this@FirLibrarySymbolProviderImpl.session,
                                 null,
                                 FirTypeParameterSymbol(),
                                 Name.identifier("P$it"),
@@ -191,7 +191,7 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider(
                         })
                         typeParameters.add(
                             FirTypeParameterImpl(
-                                session,
+                                this@FirLibrarySymbolProviderImpl.session,
                                 null,
                                 FirTypeParameterSymbol(),
                                 Name.identifier("R"),
@@ -202,7 +202,7 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider(
                         val name = OperatorNameConventions.INVOKE
                         addDeclaration(
                             FirMemberFunctionImpl(
-                                session,
+                                this@FirLibrarySymbolProviderImpl.session,
                                 null,
                                 FirNamedFunctionSymbol(CallableId(packageFqName, relativeClassName, name)),
                                 name,
@@ -219,7 +219,6 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider(
                                 isSuspend = false,
                                 receiverTypeRef = null,
                                 returnTypeRef = FirResolvedTypeRefImpl(
-                                    session,
                                     null,
                                     ConeTypeParameterTypeImpl(
                                         typeParameters.last().symbol.toLookupTag(),
@@ -229,11 +228,10 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider(
                             ).apply {
                                 valueParameters += this@klass.typeParameters.dropLast(1).map { typeParameter ->
                                     FirValueParameterImpl(
-                                        session,
+                                        this@FirLibrarySymbolProviderImpl.session,
                                         null,
                                         Name.identifier(typeParameter.name.asString().toLowerCase()),
                                         FirResolvedTypeRefImpl(
-                                            session,
                                             null,
                                             ConeTypeParameterTypeImpl(typeParameter.symbol.toLookupTag(), false)
                                         ),
