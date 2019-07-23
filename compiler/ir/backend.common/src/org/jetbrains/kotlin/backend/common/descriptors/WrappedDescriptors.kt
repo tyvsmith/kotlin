@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationDescriptorImpl
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.descriptors.impl.ReceiverParameterDescriptorImpl
+import org.jetbrains.kotlin.descriptors.impl.TypeAliasConstructorDescriptor
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBasedDeclarationDescriptor
@@ -340,7 +341,8 @@ open class WrappedVariableDescriptor(
     }
 }
 
-open class WrappedVariableDescriptorWithAccessor() : VariableDescriptorWithAccessors, WrappedCallableDescriptor<IrLocalDelegatedProperty>(Annotations.EMPTY, SourceElement.NO_SOURCE) {
+open class WrappedVariableDescriptorWithAccessor() : VariableDescriptorWithAccessors,
+    WrappedCallableDescriptor<IrLocalDelegatedProperty>(Annotations.EMPTY, SourceElement.NO_SOURCE) {
     override fun getName(): Name = owner.name
 
     override fun substitute(substitutor: TypeSubstitutor): VariableDescriptor {
@@ -667,7 +669,6 @@ class LazyTypeConstructor(
 
     override val supertypeLoopChecker: SupertypeLoopChecker
         get() = SupertypeLoopChecker.EMPTY
-
 }
 
 open class WrappedEnumEntryDescriptor(
@@ -872,6 +873,62 @@ open class WrappedPropertyDescriptor(
 class WrappedPropertyDescriptorWithContainerSource(
     override var containerSource: DeserializedContainerSource
 ) : WrappedPropertyDescriptor(), DescriptorWithContainerSource
+
+open class WrappedTypeAliasDescriptor(
+    annotations: Annotations = Annotations.EMPTY,
+    private val sourceElement: SourceElement = SourceElement.NO_SOURCE
+) : WrappedDeclarationDescriptor<IrTypeAlias>(annotations), TypeAliasDescriptor {
+
+    override val underlyingType: SimpleType
+        get() = throw UnsupportedOperationException("Unexpected use of WrappedTypeAliasDescriptor $this")
+
+    override val constructors: Collection<TypeAliasConstructorDescriptor>
+        get() = throw UnsupportedOperationException("Unexpected use of WrappedTypeAliasDescriptor $this")
+
+    override fun substitute(substitutor: TypeSubstitutor): ClassifierDescriptorWithTypeParameters =
+        throw UnsupportedOperationException("Wrapped descriptors should not be substituted")
+
+    override fun getDefaultType(): SimpleType =
+        throw UnsupportedOperationException("Unexpected use of WrappedTypeAliasDescriptor $this")
+
+    override fun getTypeConstructor(): TypeConstructor =
+        throw UnsupportedOperationException("Unexpected use of WrappedTypeAliasDescriptor $this")
+
+    override val expandedType: SimpleType
+        get() = owner.expandedType.toKotlinType() as SimpleType
+
+    override val classDescriptor: ClassDescriptor?
+        get() = expandedType.constructor.declarationDescriptor as ClassDescriptor?
+
+    override fun getOriginal(): TypeAliasDescriptor = this
+
+    override fun isInner(): Boolean = false
+
+    override fun getDeclaredTypeParameters(): List<TypeParameterDescriptor> = owner.typeParameters.map { it.descriptor }
+
+    override fun getContainingDeclaration(): DeclarationDescriptor = getContainingDeclaration(owner)
+
+    override fun getName(): Name = owner.name
+
+    override fun getModality(): Modality = Modality.FINAL
+
+    override fun getSource(): SourceElement = sourceElement
+
+    override fun getVisibility(): Visibility = owner.visibility
+
+    override fun isExpect(): Boolean = false
+
+    override fun isActual(): Boolean = owner.isActual
+
+    override fun isExternal(): Boolean = false
+
+    override fun <R : Any?, D : Any?> accept(visitor: DeclarationDescriptorVisitor<R, D>, data: D): R =
+        visitor.visitTypeAliasDescriptor(this, data)
+
+    override fun acceptVoid(visitor: DeclarationDescriptorVisitor<Void, Void>) {
+        visitor.visitTypeAliasDescriptor(this, null)
+    }
+}
 
 open class WrappedFieldDescriptor(
     annotations: Annotations = Annotations.EMPTY,
