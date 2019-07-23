@@ -5,20 +5,11 @@
 
 package org.jetbrains.kotlin.idea.fir
 
-import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.cfg.pseudocode.containingDeclarationForPseudocode
 import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
-import org.jetbrains.kotlin.fir.declarations.FirCallableMemberDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirFile
-import org.jetbrains.kotlin.fir.declarations.FirResolveStage
-import org.jetbrains.kotlin.fir.declarations.FirTypedDeclaration
-import org.jetbrains.kotlin.fir.dependenciesWithoutSelf
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.FirExpression
-import org.jetbrains.kotlin.fir.java.FirJavaModuleBasedSession
-import org.jetbrains.kotlin.fir.java.FirLibrarySession
-import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.resolve.FirProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
 import org.jetbrains.kotlin.fir.resolve.transformers.*
@@ -30,17 +21,11 @@ import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
-import org.jetbrains.kotlin.idea.caches.project.IdeaModuleInfo
-import org.jetbrains.kotlin.idea.caches.project.ModuleSourceInfo
-import org.jetbrains.kotlin.idea.caches.project.getModuleInfo
-import org.jetbrains.kotlin.idea.caches.project.isLibraryClasses
-import org.jetbrains.kotlin.idea.caches.resolve.IDEPackagePartProvider
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
-import org.jetbrains.kotlin.utils.addToStdlib.cast
 
 private val resolveStageToTransformerMap = mutableMapOf(
     FirResolveStage.RAW_FIR to emptyList(),
@@ -76,46 +61,6 @@ private fun KtClassOrObject.relativeFqName(): FqName {
     return parentFqName?.child(className) ?: FqName.topLevel(className)
 }
 
-private fun createLibrarySession(moduleInfo: IdeaModuleInfo, project: Project, provider: FirProjectSessionProvider): FirLibrarySession {
-    val contentScope = moduleInfo.contentScope()
-    return FirLibrarySession.create(moduleInfo, provider, contentScope, project, IDEPackagePartProvider(contentScope))
-}
-
-val KtElement.session: FirSession
-    get() {
-        val moduleInfo = this.getModuleInfo() as ModuleSourceInfo
-        val sessionProvider = FirProjectSessionProvider(project)
-        return sessionProvider.getSession(moduleInfo) ?: FirJavaModuleBasedSession(
-            moduleInfo, sessionProvider, moduleInfo.contentScope()
-        ).also {
-            val ideaModuleInfo = moduleInfo.cast<IdeaModuleInfo>()
-            ideaModuleInfo.dependenciesWithoutSelf().forEach {
-                if (it is IdeaModuleInfo && it.isLibraryClasses()) {
-                    createLibrarySession(it, project, sessionProvider)
-                }
-            }
-        }
-    }
-
-private fun FirProviderImpl.getFile(file: KtFile, stage: FirResolveStage): FirFile {
-    val packageFqName = file.packageFqName
-    // TODO: minor file modifications should not force full rebuild (!)
-    var cachedOrNewFirFile = getFirFilesByPackage(packageFqName).find { it.psi == file }
-    if (cachedOrNewFirFile == null || cachedOrNewFirFile.resolveStage < FirResolveStage.DECLARATIONS) {
-        // TODO: when we are at some resolve stage, we can omit stages which are already done
-        println("FIR resolution: start transformation of ${file.name}")
-        val builder = RawFirBuilder(session, stubMode = stage.stubMode)
-        val firFile = builder.buildFirFile(file)
-        cachedOrNewFirFile = firFile
-        recordFile(firFile)
-
-        for (transformer in stage.transformers) {
-            transformer.transformFile(firFile, null)
-        }
-    }
-    return cachedOrNewFirFile
-}
-
 private fun FirFile.findCallableMember(
     provider: FirProvider, packageFqName: FqName, klassFqName: FqName?, declName: Name
 ): FirCallableMemberDeclaration<*> {
@@ -142,51 +87,45 @@ private fun FirFile.findCallableMember(
     return result!!
 }
 
-fun KtCallableDeclaration.getOrBuildFir(stage: FirResolveStage = FirResolveStage.DECLARATIONS): FirCallableMemberDeclaration<*> {
-    val session = this.session
+fun KtCallableDeclaration.getOrBuildFir(
+    state: FirResolveState,
+    stage: FirResolveStage = FirResolveStage.DECLARATIONS
+): FirCallableMemberDeclaration<*> {
+    val session = state.getSession(this)
 
     val file = this.containingKtFile
     val packageFqName = file.packageFqName
     val klassFqName = this.containingClassOrObject?.relativeFqName()
     val declName = this.nameAsSafeName
 
-    val firProvider = FirProvider.getInstance(session) as FirProviderImpl
-    val firFile = firProvider.getFile(file, stage)
-
-    return firFile.findCallableMember(firProvider, packageFqName, klassFqName, declName)
+    val firProvider = FirProvider.getInstance(session) as IdeFirProvider
+    val firFile = firProvider.getOrBuildFile(file)
+    val memberSymbol = firFile.findCallableMember(firProvider, packageFqName, klassFqName, declName).symbol
+    memberSymbol.fir.runResolve(stage, state, firFile)
+    return memberSymbol.fir
 }
 
-fun KtExpression.getOrBuildFir(stage: FirResolveStage = FirResolveStage.EXPRESSIONS): FirExpression {
-    val session = this.session
+private fun FirDeclaration.runResolve(toStage: FirResolveStage, state: FirResolveState, file: FirFile) {
+    if (this.resolveStage < toStage) {
+        // TODO
+    }
+}
 
-    val file = this.containingKtFile
-    val packageFqName = file.packageFqName
-    val container = this.containingDeclarationForPseudocode
-    val klassFqName = container?.containingClassOrObject?.relativeFqName()
-    val declName = (container as? KtNamedDeclaration)?.nameAsSafeName ?: error("Unsupported: ${container?.javaClass}")
-
-    val firProvider = FirProvider.getInstance(session) as FirProviderImpl
-    val firFile = firProvider.getFile(file, stage)
-    val firCallableMember = firFile.findCallableMember(firProvider, packageFqName, klassFqName, declName)
-
-    var result: FirExpression? = null
-    firCallableMember.accept(object : FirVisitorVoid() {
-        override fun visitElement(element: FirElement) {
-            if (result == null) {
+fun KtExpression.getOrBuildFir(
+    state: FirResolveState,
+    stage: FirResolveStage = FirResolveStage.EXPRESSIONS
+): FirExpression {
+    val container = this.containingDeclarationForPseudocode ?: error("WTF?")
+    val containerFir = container.getOrBuildFir(state, stage)
+    return state[this] as? FirExpression ?: run {
+        containerFir.accept(object : FirVisitorVoid() {
+            override fun visitElement(element: FirElement) {
+                (element.psi as? KtElement)?.let { state.record(it, element) }
                 element.acceptChildren(this)
             }
-        }
-
-        override fun visitExpression(expression: FirExpression) {
-            if (expression.psi == this@getOrBuildFir) {
-                result = expression
-            } else {
-                super.visitExpression(expression)
-            }
-        }
-
-    })
-    return result ?: error("Not found: ${this.javaClass}")
+        })
+        return state[this] as FirExpression
+    }
 }
 
 val FirTypedDeclaration.coneTypeSafe: ConeKotlinType? get() = (this.returnTypeRef as? FirResolvedTypeRef)?.type
