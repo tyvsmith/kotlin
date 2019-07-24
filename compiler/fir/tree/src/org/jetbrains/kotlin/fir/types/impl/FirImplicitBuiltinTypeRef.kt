@@ -18,12 +18,13 @@ import org.jetbrains.kotlin.name.ClassId
 sealed class FirImplicitBuiltinTypeRef(
     session: FirSession,
     psi: PsiElement?,
-    val id: ClassId
+    val id: ClassId,
+    isNullable: Boolean = false
 ) : FirResolvedTypeRef, FirAbstractElement(session, psi) {
     override val annotations: List<FirAnnotationCall>
         get() = emptyList()
 
-    override val type: ConeKotlinType = ConeClassTypeImpl(ConeClassLikeLookupTagImpl(id), emptyArray(), false)
+    override val type: ConeKotlinType = ConeClassTypeImpl(ConeClassLikeLookupTagImpl(id), emptyArray(), isNullable)
 }
 
 class FirImplicitUnitTypeRef(
@@ -35,6 +36,11 @@ class FirImplicitAnyTypeRef(
     session: FirSession,
     psi: PsiElement?
 ) : FirImplicitBuiltinTypeRef(session, psi, StandardClassIds.Any)
+
+class FirImplicitNullableAnyTypeRef(
+    session: FirSession,
+    psi: PsiElement?
+) : FirImplicitBuiltinTypeRef(session, psi, StandardClassIds.Any, isNullable = true)
 
 class FirImplicitEnumTypeRef(
     session: FirSession,
