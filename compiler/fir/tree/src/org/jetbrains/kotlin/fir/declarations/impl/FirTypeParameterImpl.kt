@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.transformInplace
 import org.jetbrains.kotlin.fir.types.FirTypeRef
+import org.jetbrains.kotlin.fir.types.impl.FirImplicitNullableAnyTypeRef
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
@@ -28,7 +29,8 @@ class FirTypeParameterImpl(
         symbol.bind(this)
     }
 
-    override val bounds = mutableListOf<FirTypeRef>()
+    // TODO: can we handle default bound in RawFirBuilder
+    override val bounds: MutableList<FirTypeRef> = mutableListOf(FirImplicitNullableAnyTypeRef(session, null))
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirElement {
         bounds.transformInplace(transformer, data)
