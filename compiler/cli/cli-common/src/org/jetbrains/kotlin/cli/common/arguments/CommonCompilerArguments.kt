@@ -135,6 +135,12 @@ abstract class CommonCompilerArguments : CommonToolArguments() {
     var inlineClasses: Boolean by FreezableVar(false)
 
     @Argument(
+        value = "-Xpolymorphic-signature",
+        description = "Enable experimental support for @PolymorphicSignature (MethodHandle/VarHandle)"
+    )
+    var polymorphicSignature: Boolean by FreezableVar(false)
+
+    @Argument(
         value = "-Xlegacy-smart-cast-after-try",
         description = "Allow var smart casts despite assignment in try block"
     )
