@@ -1,0 +1,24 @@
+FILE: simple.kt
+    public abstract interface A : R|kotlin/Any| {
+    }
+    public abstract interface B : R|A| {
+    }
+    public abstract interface C : R|A| {
+    }
+    public final fun <K> select(x: R|K|, y: R|K|): R|K| {
+        ^select when (lval <bangbang>: R|kotlin/Nothing|? = Null(null)) {
+            ==($subj$, Null(null)) ->  {
+                throw <Unresolved name: KotlinNullPointerException>#()
+            }
+            else ->  {
+                R|<local>/<bangbang>|!
+            }
+        }
+
+    }
+    public final fun test_2(x: R|B|, y: R|C|): R|A| {
+        ^test_2 R|/select|<R|A|>(R|<local>/x|, R|<local>/y|)
+    }
+    public final fun test_3(x: R|kotlin/Int|, s: R|kotlin/String|): R|kotlin/Comparable<kotlin/Int>| {
+        ^test_3 R|/select|<R|kotlin/Comparable<kotlin/Int>|>(R|<local>/x|, R|<local>/s|)
+    }
