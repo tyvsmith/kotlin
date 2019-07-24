@@ -8,11 +8,18 @@ package org.jetbrains.kotlin.fir.declarations
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.FirElement
 
-enum class FirResolveStage : FirElement {
+enum class FirResolvePhase : FirElement {
     RAW_FIR,
+    IMPORTS,
     SUPER_TYPES,
+    TYPES,
     DECLARATIONS,
+    IMPLICIT_TYPES,
     EXPRESSIONS;
+
+    val prev: FirResolvePhase get() = values()[ordinal - 1]
+
+    val next: FirResolvePhase get() = values()[ordinal + 1]
 
     override val psi: PsiElement?
         get() = null

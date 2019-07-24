@@ -15,7 +15,7 @@ interface FirDeclaration : FirElement {
 
     val session: FirSession
 
-    var resolveStage: FirResolveStage
+    var resolvePhase: FirResolvePhase
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R =
         visitor.visitDeclaration(this, data)

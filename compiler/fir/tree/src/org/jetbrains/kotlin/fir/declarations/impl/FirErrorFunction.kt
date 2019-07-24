@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.fir.FirAbstractElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirErrorDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirFunction
-import org.jetbrains.kotlin.fir.declarations.FirResolveStage
+import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirBlock
@@ -30,7 +30,7 @@ class FirErrorFunction(
     override val body: FirBlock?
         get() = null
 
-    override var resolveStage = FirResolveStage.EXPRESSIONS
+    override var resolvePhase = FirResolvePhase.EXPRESSIONS
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R =
         super<FirFunction>.accept(visitor, data)

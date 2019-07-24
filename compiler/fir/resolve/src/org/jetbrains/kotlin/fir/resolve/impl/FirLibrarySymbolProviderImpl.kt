@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirCallableMemberDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.impl.*
 import org.jetbrains.kotlin.fir.deserialization.FirBuiltinAnnotationDeserializer
 import org.jetbrains.kotlin.fir.deserialization.FirDeserializationContext
@@ -95,7 +96,9 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider(
             }
             return lookup.getOrPut(classId, { FirClassSymbol(classId) }) { symbol ->
                 if (shouldBeEnumEntry) {
-                    FirEnumEntryImpl(session, null, symbol, classId.shortClassName)
+                    FirEnumEntryImpl(session, null, symbol, classId.shortClassName).apply {
+                        resolvePhase = FirResolvePhase.DECLARATIONS
+                    }
                 } else {
                     val classData = classDataFinder.findClassData(classId)!!
                     val classProto = classData.classProto
@@ -179,6 +182,7 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider(
                         isData = false,
                         isInline = false
                     ).apply klass@{
+                        resolvePhase = FirResolvePhase.DECLARATIONS
                         typeParameters.addAll((1..arity).map {
                             FirTypeParameterImpl(
                                 this@FirLibrarySymbolProviderImpl.session,
@@ -226,6 +230,7 @@ class FirLibrarySymbolProviderImpl(val session: FirSession) : FirSymbolProvider(
                                     )
                                 )
                             ).apply {
+                                resolvePhase = FirResolvePhase.DECLARATIONS
                                 valueParameters += this@klass.typeParameters.dropLast(1).map { typeParameter ->
                                     FirValueParameterImpl(
                                         this@FirLibrarySymbolProviderImpl.session,

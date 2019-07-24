@@ -7,11 +7,9 @@ package org.jetbrains.kotlin.idea.fir
 
 import org.jetbrains.kotlin.cfg.pseudocode.containingDeclarationForPseudocode
 import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.resolve.FirProvider
-import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
 import org.jetbrains.kotlin.fir.resolve.transformers.*
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirTopLevelDeclaredMemberScope
@@ -28,18 +26,18 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
 
 private val resolveStageToTransformerMap = mutableMapOf(
-    FirResolveStage.RAW_FIR to emptyList(),
-    FirResolveStage.SUPER_TYPES to listOf(
+    FirResolvePhase.RAW_FIR to emptyList(),
+    FirResolvePhase.SUPER_TYPES to listOf(
         FirImportResolveTransformer(),
         FirSupertypeResolverTransformer()
     ),
-    FirResolveStage.DECLARATIONS to listOf(
+    FirResolvePhase.DECLARATIONS to listOf(
         FirImportResolveTransformer(),
         FirSupertypeResolverTransformer(),
         FirTypeResolveTransformer(),
         FirStatusResolveTransformer()
     ),
-    FirResolveStage.EXPRESSIONS to listOf(
+    FirResolvePhase.EXPRESSIONS to listOf(
         FirImportResolveTransformer(),
         FirSupertypeResolverTransformer(),
         FirTypeResolveTransformer(),
@@ -49,10 +47,10 @@ private val resolveStageToTransformerMap = mutableMapOf(
     )
 )
 
-private val FirResolveStage.stubMode: Boolean
-    get() = this != FirResolveStage.EXPRESSIONS
+private val FirResolvePhase.stubMode: Boolean
+    get() = this != FirResolvePhase.EXPRESSIONS
 
-private val FirResolveStage.transformers: List<FirTransformer<Nothing?>>
+private val FirResolvePhase.transformers: List<FirTransformer<Nothing?>>
     get() = resolveStageToTransformerMap[this] ?: emptyList()
 
 private fun KtClassOrObject.relativeFqName(): FqName {
@@ -89,7 +87,7 @@ private fun FirFile.findCallableMember(
 
 fun KtCallableDeclaration.getOrBuildFir(
     state: FirResolveState,
-    stage: FirResolveStage = FirResolveStage.DECLARATIONS
+    phase: FirResolvePhase = FirResolvePhase.DECLARATIONS
 ): FirCallableMemberDeclaration<*> {
     val session = state.getSession(this)
 
@@ -101,22 +99,22 @@ fun KtCallableDeclaration.getOrBuildFir(
     val firProvider = FirProvider.getInstance(session) as IdeFirProvider
     val firFile = firProvider.getOrBuildFile(file)
     val memberSymbol = firFile.findCallableMember(firProvider, packageFqName, klassFqName, declName).symbol
-    memberSymbol.fir.runResolve(stage, state, firFile)
+    memberSymbol.fir.runResolve(phase, state, firFile)
     return memberSymbol.fir
 }
 
-private fun FirDeclaration.runResolve(toStage: FirResolveStage, state: FirResolveState, file: FirFile) {
-    if (this.resolveStage < toStage) {
+private fun FirDeclaration.runResolve(toPhase: FirResolvePhase, state: FirResolveState, file: FirFile) {
+    if (this.resolvePhase < toPhase) {
         // TODO
     }
 }
 
 fun KtExpression.getOrBuildFir(
     state: FirResolveState,
-    stage: FirResolveStage = FirResolveStage.EXPRESSIONS
+    phase: FirResolvePhase = FirResolvePhase.EXPRESSIONS
 ): FirExpression {
     val container = this.containingDeclarationForPseudocode ?: error("WTF?")
-    val containerFir = container.getOrBuildFir(state, stage)
+    val containerFir = container.getOrBuildFir(state, phase)
     return state[this] as? FirExpression ?: run {
         containerFir.accept(object : FirVisitorVoid() {
             override fun visitElement(element: FirElement) {

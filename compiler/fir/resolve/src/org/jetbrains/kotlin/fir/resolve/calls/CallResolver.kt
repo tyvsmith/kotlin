@@ -91,7 +91,7 @@ class CheckerSinkImpl(override val components: InferenceComponents, var continua
 
 
 class Candidate(
-    val symbol: FirBasedSymbol<*>,
+    val symbol: AbstractFirBasedSymbol<*>,
     val dispatchReceiverValue: ClassDispatchReceiverValue?,
     val implicitExtensionReceiverValue: ImplicitReceiverValue?,
     val explicitReceiverKind: ExplicitReceiverKind,
@@ -134,14 +134,14 @@ enum class TowerDataKind {
 
 interface TowerScopeLevel {
 
-    sealed class Token<out T : FirBasedSymbol<*>> {
+    sealed class Token<out T : AbstractFirBasedSymbol<*>> {
         object Properties : Token<FirPropertySymbol>()
 
         object Functions : Token<FirFunctionSymbol<*>>()
-        object Objects : Token<FirBasedSymbol<*>>()
+        object Objects : Token<AbstractFirBasedSymbol<*>>()
     }
 
-    fun <T : FirBasedSymbol<*>> processElementsByName(
+    fun <T : AbstractFirBasedSymbol<*>> processElementsByName(
         token: Token<T>,
         name: Name,
         explicitReceiver: ExpressionReceiverValue?,
@@ -157,7 +157,7 @@ interface TowerScopeLevel {
     }
 
     object Empty : TowerScopeLevel {
-        override fun <T : FirBasedSymbol<*>> processElementsByName(
+        override fun <T : AbstractFirBasedSymbol<*>> processElementsByName(
             token: Token<T>,
             name: Name,
             explicitReceiver: ExpressionReceiverValue?,
@@ -167,7 +167,7 @@ interface TowerScopeLevel {
 }
 
 abstract class SessionBasedTowerLevel(val session: FirSession) : TowerScopeLevel {
-    protected fun FirBasedSymbol<*>.dispatchReceiverValue(): ClassDispatchReceiverValue? {
+    protected fun AbstractFirBasedSymbol<*>.dispatchReceiverValue(): ClassDispatchReceiverValue? {
         return when (this) {
             is FirNamedFunctionSymbol -> fir.dispatchReceiverValue(session)
             is FirClassSymbol -> ClassDispatchReceiverValue(fir.symbol)
@@ -194,7 +194,7 @@ class MemberScopeTowerLevel(
     val scopeSession: ScopeSession
 ) : SessionBasedTowerLevel(session) {
 
-    private fun <T : FirBasedSymbol<*>> processMembers(
+    private fun <T : AbstractFirBasedSymbol<*>> processMembers(
         output: TowerScopeLevel.TowerScopeLevelProcessor<T>,
         explicitExtensionReceiver: ExpressionReceiverValue?,
         processScopeMembers: FirScope.(processor: (T) -> ProcessorAction) -> ProcessorAction
@@ -220,7 +220,7 @@ class MemberScopeTowerLevel(
         }
     }
 
-    override fun <T : FirBasedSymbol<*>> processElementsByName(
+    override fun <T : AbstractFirBasedSymbol<*>> processElementsByName(
         token: TowerScopeLevel.Token<T>,
         name: Name,
         explicitReceiver: ExpressionReceiverValue?,
@@ -256,7 +256,7 @@ class ScopeTowerLevel(
     val scope: FirScope,
     val implicitExtensionReceiver: ImplicitReceiverValue? = null
 ) : SessionBasedTowerLevel(session) {
-    override fun <T : FirBasedSymbol<*>> processElementsByName(
+    override fun <T : AbstractFirBasedSymbol<*>> processElementsByName(
         token: TowerScopeLevel.Token<T>,
         name: Name,
         explicitReceiver: ExpressionReceiverValue?,
@@ -303,7 +303,7 @@ class ScopeTowerLevel(
  *  Handles only statics and top-levels, DOES NOT handle objects/companions members
  */
 class QualifiedReceiverTowerLevel(session: FirSession) : SessionBasedTowerLevel(session) {
-    override fun <T : FirBasedSymbol<*>> processElementsByName(
+    override fun <T : AbstractFirBasedSymbol<*>> processElementsByName(
         token: TowerScopeLevel.Token<T>,
         name: Name,
         explicitReceiver: ExpressionReceiverValue?,
@@ -338,7 +338,7 @@ class QualifiedReceiverTowerLevel(session: FirSession) : SessionBasedTowerLevel(
 
 }
 
-class QualifiedReceiverTowerDataConsumer<T : FirBasedSymbol<*>>(
+class QualifiedReceiverTowerDataConsumer<T : AbstractFirBasedSymbol<*>>(
     val session: FirSession,
     val name: Name,
     val token: TowerScopeLevel.Token<T>,
@@ -596,7 +596,7 @@ class AccumulatingTowerDataConsumer(
     }
 }
 
-class ExplicitReceiverTowerDataConsumer<T : FirBasedSymbol<*>>(
+class ExplicitReceiverTowerDataConsumer<T : AbstractFirBasedSymbol<*>>(
     val session: FirSession,
     val name: Name,
     val token: TowerScopeLevel.Token<T>,
@@ -696,7 +696,7 @@ class ExplicitReceiverTowerDataConsumer<T : FirBasedSymbol<*>>(
 
 }
 
-class NoExplicitReceiverTowerDataConsumer<T : FirBasedSymbol<*>>(
+class NoExplicitReceiverTowerDataConsumer<T : AbstractFirBasedSymbol<*>>(
     val session: FirSession,
     val name: Name,
     val token: TowerScopeLevel.Token<T>,

@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.fir.declarations.impl
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
-import org.jetbrains.kotlin.fir.declarations.FirResolveStage
+import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.types.FirTypeRef
@@ -26,7 +26,7 @@ class FirAnonymousFunctionImpl(
 
     override var body: FirBlock? = null
 
-    override var resolveStage = FirResolveStage.DECLARATIONS
+    override var resolvePhase = FirResolvePhase.DECLARATIONS
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirElement {
         returnTypeRef = returnTypeRef.transformSingle(transformer, data)

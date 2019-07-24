@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.expressions.FirBlock
@@ -16,7 +17,7 @@ import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.compose
 
-class FirStatusResolveTransformer : FirAbstractTreeTransformer() {
+class FirStatusResolveTransformer : FirAbstractTreeTransformer(phase = FirResolvePhase.DECLARATIONS) {
     private val declarationsWithStatuses = mutableListOf<FirDeclaration>()
 
     private val classes = mutableListOf<FirRegularClass>()
@@ -58,6 +59,13 @@ class FirStatusResolveTransformer : FirAbstractTreeTransformer() {
             }
             else -> Modality.FINAL
         }
+    }
+
+    override lateinit var session: FirSession
+
+    override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
+        session = file.fileSession
+        return super.transformFile(file, data)
     }
 
     override fun transformDeclarationStatus(

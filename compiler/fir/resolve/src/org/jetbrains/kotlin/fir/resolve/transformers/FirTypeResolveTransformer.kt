@@ -18,16 +18,17 @@ import org.jetbrains.kotlin.fir.types.impl.FirImplicitBuiltinTypeRef
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.compose
 
-open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(reversedScopePriority = true) {
-    private lateinit var session: FirSession
+open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
+    phase = FirResolvePhase.TYPES,
+    reversedScopePriority = true
+) {
+    override lateinit var session: FirSession
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirFile> {
         session = file.fileSession
         return withScopeCleanup {
             towerScope.addImportingScopes(file, session)
-            val result = super.transformFile(file, data)
-            file.resolveStage = FirResolveStage.DECLARATIONS
-            result
+            super.transformFile(file, data)
         }
     }
 
@@ -54,27 +55,21 @@ open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
             towerScope.scopes += FirNestedClassifierScope(classId, firProvider)
             regularClass.addTypeParametersScope()
 
-            val result = super.transformRegularClass(regularClass, data)
-            regularClass.resolveStage = FirResolveStage.DECLARATIONS
-            result
+            super.transformRegularClass(regularClass, data)
         }
     }
 
     override fun transformConstructor(constructor: FirConstructor, data: Nothing?): CompositeTransformResult<FirDeclaration> {
         return withScopeCleanup {
             constructor.addTypeParametersScope()
-            val result = super.transformConstructor(constructor, data)
-            constructor.resolveStage = FirResolveStage.DECLARATIONS
-            result
+            super.transformConstructor(constructor, data)
         }
     }
 
     override fun transformTypeAlias(typeAlias: FirTypeAlias, data: Nothing?): CompositeTransformResult<FirDeclaration> {
         return withScopeCleanup {
             typeAlias.addTypeParametersScope()
-            val result = super.transformTypeAlias(typeAlias, data)
-            typeAlias.resolveStage = FirResolveStage.DECLARATIONS
-            result
+            super.transformTypeAlias(typeAlias, data)
         }
     }
 
@@ -82,18 +77,14 @@ open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
     override fun transformProperty(property: FirProperty, data: Nothing?): CompositeTransformResult<FirDeclaration> {
         return withScopeCleanup {
             property.addTypeParametersScope()
-            val result = super.transformProperty(property, data)
-            property.resolveStage = FirResolveStage.DECLARATIONS
-            result
+            super.transformProperty(property, data)
         }
     }
 
     override fun transformNamedFunction(namedFunction: FirNamedFunction, data: Nothing?): CompositeTransformResult<FirDeclaration> {
         return withScopeCleanup {
             namedFunction.addTypeParametersScope()
-            val result = super.transformNamedFunction(namedFunction, data)
-            namedFunction.resolveStage = FirResolveStage.DECLARATIONS
-            result
+            super.transformNamedFunction(namedFunction, data)
         }
     }
 
@@ -118,7 +109,6 @@ open class FirTypeResolveTransformer : FirAbstractTreeTransformerWithSuperTypes(
                 )
             )
         }
-        result.resolveStage = FirResolveStage.DECLARATIONS
         return result.compose()
     }
 
