@@ -31,6 +31,10 @@ class GradleConfiguratorPlatformSpecificTest : GradleImportingTestCase() {
 
     @TargetVersions("4.7+")
     @Test
+    fun testEnableFeatureSupportMultiplatformWithXFlag() = testEnableFeatureSupportMultiplatform()
+
+    @TargetVersions("4.7+")
+    @Test
     fun testEnableFeatureSupportMultiplatform2() {
         val files = importProjectFromTestData()
 
