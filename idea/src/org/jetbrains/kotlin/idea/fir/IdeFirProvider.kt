@@ -57,6 +57,8 @@ class IdeFirProvider(
         }
     }
 
+    internal fun getFile(ktFile: KtFile): FirFile? = files[ktFile]
+
     override fun getClassLikeSymbolByFqName(classId: ClassId): FirClassLikeSymbol<*>? {
         return getFirClassifierByFqName(classId)?.symbol
     }

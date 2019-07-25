@@ -8,16 +8,24 @@ package org.jetbrains.kotlin.idea.fir
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.openapi.util.io.FileUtil
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.search.FileTypeIndex
 import com.intellij.testFramework.LightProjectDescriptor
 import junit.framework.TestCase
 import org.jetbrains.kotlin.fir.render
+import org.jetbrains.kotlin.fir.resolve.FirProvider
+import org.jetbrains.kotlin.idea.KotlinFileType
+import org.jetbrains.kotlin.idea.caches.project.IdeaModuleInfo
+import org.jetbrains.kotlin.idea.caches.project.productionSourceInfo
 import org.jetbrains.kotlin.idea.jsonUtils.getString
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.KotlinLightProjectDescriptor
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
+import org.jetbrains.kotlin.idea.util.projectStructure.allModules
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import java.io.File
 
@@ -59,5 +67,28 @@ abstract class AbstractFirLazyResolveTest : KotlinLightCodeInsightFixtureTestCas
 
         val resultsDump = firExpression.render()
         KotlinTestUtils.assertEqualsToFile(File(testFile.parent, "results.txt"), resultsDump)
+
+        fun expectedTxtPath(virtualFile: VirtualFile): String {
+            val virtualPath = virtualFile.path.substringAfter("/src/")
+            var result: String? = null
+            val root = File(path).parentFile
+            for (file in root.walkTopDown()) {
+                if (!file.isDirectory && virtualPath in file.absolutePath) {
+                    result = file.absolutePath.replace(".kt", ".txt")
+                }
+            }
+            return result!!
+        }
+
+        val moduleInfo = project.allModules().single().productionSourceInfo() as IdeaModuleInfo
+        val contentScope = moduleInfo.contentScope()
+        val files = FileTypeIndex.getFiles(KotlinFileType.INSTANCE, contentScope)
+        for (file in files) {
+            val psiFile = psiManager.findFile(file) as KtFile
+            val session = resolveState.getSession(psiFile)
+            val firProvider = FirProvider.getInstance(session) as IdeFirProvider
+            val firFile = firProvider.getFile(psiFile) ?: continue
+            KotlinTestUtils.assertEqualsToFile(File(expectedTxtPath(file)), firFile.render())
+        }
     }
 }
