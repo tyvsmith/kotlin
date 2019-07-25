@@ -141,6 +141,7 @@ class FirMemberDeserializer(private val c: FirDeserializationContext) {
                 emptyList() /* TODO */
             )
         ).apply {
+            resolvePhase = FirResolvePhase.DECLARATIONS
             typeParameters += local.typeDeserializer.ownTypeParameters.map { it.fir }
         }
     }
