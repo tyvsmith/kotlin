@@ -1149,8 +1149,8 @@ open class FirBodyResolveTransformer(
 private fun inferenceComponents(session: FirSession, jump: ReturnTypeCalculatorWithJump, scopeSession: ScopeSession) =
     InferenceComponents(object : ConeInferenceContext, TypeSystemInferenceExtensionContextDelegate {
         override fun findCommonIntegerLiteralTypesSuperType(explicitSupertypes: List<SimpleTypeMarker>): SimpleTypeMarker? {
-            //TODO wtf
-            return explicitSupertypes.firstOrNull()
+            // TODO: implement
+            return null
         }
 
         override fun TypeConstructorMarker.getApproximatedIntegerLiteralType(): KotlinTypeMarker {
