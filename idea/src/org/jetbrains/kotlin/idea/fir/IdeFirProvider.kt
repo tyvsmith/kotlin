@@ -62,8 +62,9 @@ class IdeFirProvider(
     }
 
     override fun getTopLevelCallableSymbols(packageFqName: FqName, name: Name): List<FirCallableSymbol<*>> {
-        val topLevelFunctions = KotlinTopLevelFunctionFqnNameIndex.getInstance()["$packageFqName.$name", project, scope]
-        val topLevelProperties = KotlinTopLevelPropertyFqnNameIndex.getInstance()["$packageFqName.$name", project, scope]
+        val packagePrefix = if (packageFqName.isRoot) "" else "$packageFqName."
+        val topLevelFunctions = KotlinTopLevelFunctionFqnNameIndex.getInstance()["$packagePrefix$name", project, scope]
+        val topLevelProperties = KotlinTopLevelPropertyFqnNameIndex.getInstance()["$packagePrefix$name", project, scope]
         topLevelFunctions.forEach { getOrBuildFile(it.containingKtFile) }
         topLevelProperties.forEach { getOrBuildFile(it.containingKtFile) }
         return cacheProvider.getTopLevelCallableSymbols(packageFqName, name)

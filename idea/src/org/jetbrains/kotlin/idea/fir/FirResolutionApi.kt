@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.idea.fir
 
 import org.jetbrains.kotlin.cfg.pseudocode.containingDeclarationForPseudocode
 import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.FirReference
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.resolve.FirProvider
@@ -17,6 +18,7 @@ import org.jetbrains.kotlin.fir.symbols.ConeCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
+import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.name.ClassId
@@ -60,7 +62,8 @@ private fun KtClassOrObject.relativeFqName(): FqName {
 }
 
 private fun FirFile.findCallableMember(
-    provider: FirProvider, packageFqName: FqName, klassFqName: FqName?, declName: Name
+    provider: FirProvider, callableMember: KtCallableDeclaration,
+    packageFqName: FqName, klassFqName: FqName?, declName: Name
 ): FirCallableMemberDeclaration<*> {
     val memberScope =
         if (klassFqName == null) FirTopLevelDeclaredMemberScope(this, session)
@@ -69,14 +72,14 @@ private fun FirFile.findCallableMember(
     val processor = { symbol: ConeCallableSymbol ->
         val firSymbol = symbol as? FirBasedSymbol<*>
         val fir = firSymbol?.fir as? FirCallableMemberDeclaration<*>
-        if (fir?.psi == this) {
+        if (fir?.psi == callableMember) {
             result = fir
             ProcessorAction.STOP
         } else {
             ProcessorAction.NEXT
         }
     }
-    if (this is KtNamedFunction) {
+    if (callableMember is KtNamedFunction) {
         memberScope.processFunctionsByName(declName, processor)
     } else {
         memberScope.processPropertiesByName(declName, processor)
@@ -98,29 +101,34 @@ fun KtCallableDeclaration.getOrBuildFir(
 
     val firProvider = FirProvider.getInstance(session) as IdeFirProvider
     val firFile = firProvider.getOrBuildFile(file)
-    val memberSymbol = firFile.findCallableMember(firProvider, packageFqName, klassFqName, declName).symbol
+    val memberSymbol = firFile.findCallableMember(firProvider, this, packageFqName, klassFqName, declName).symbol
     memberSymbol.fir.runResolve(phase, state, firFile)
     return memberSymbol.fir
 }
 
 private fun FirDeclaration.runResolve(toPhase: FirResolvePhase, state: FirResolveState, file: FirFile) {
-    if (this.resolvePhase < toPhase) {
-        // TODO
-    }
+    file.runResolve(toPhase = toPhase, fromPhase = this.resolvePhase)
 }
 
 fun KtExpression.getOrBuildFir(
     state: FirResolveState,
     phase: FirResolvePhase = FirResolvePhase.EXPRESSIONS
 ): FirExpression {
-    val container = this.containingDeclarationForPseudocode ?: error("WTF?")
-    val containerFir = container.getOrBuildFir(state, phase)
+    val container = this.containingDeclarationForPseudocode ?: error("No containing declaration: $text")
+    // TODO: non-callables (KtClassOrObject)
+    val containerFir = (container as KtCallableDeclaration).getOrBuildFir(state, phase)
     return state[this] as? FirExpression ?: run {
         containerFir.accept(object : FirVisitorVoid() {
             override fun visitElement(element: FirElement) {
-                (element.psi as? KtElement)?.let { state.record(it, element) }
+                (element.psi as? KtElement)?.let {
+                    state.record(it, element)
+                }
                 element.acceptChildren(this)
             }
+
+            override fun visitReference(reference: FirReference) {}
+
+            override fun visitTypeRef(typeRef: FirTypeRef) {}
         })
         return state[this] as FirExpression
     }
