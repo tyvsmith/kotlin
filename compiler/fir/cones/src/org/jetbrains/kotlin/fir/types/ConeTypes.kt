@@ -164,3 +164,39 @@ class ConeDefinitelyNotNullType(val original: ConeKotlinType): ConeKotlinType(),
     override val nullability: ConeNullability
         get() = ConeNullability.NOT_NULL
 }
+
+/*
+ * Contract of the intersection type: it is flat. It means that
+ *   intersection type can not contains another intersection types
+ *   inside it. To keep this contract construct new intersection types
+ *   only via ConeTypeIntersector
+ */
+class ConeIntersectionType(
+    val constructor: ConeIntersectionTypeConstructor,
+    override val nullability: ConeNullability = ConeNullability.NOT_NULL
+) : ConeKotlinType(), SimpleTypeMarker {
+    override val typeArguments: Array<out ConeKotlinTypeProjection>
+        get() = emptyArray()
+
+    val intersectedTypes: Collection<ConeKotlinType> get() = constructor.intersectedTypes
+    val statusMap: Map<ConeKotlinType, ConeIntersectionTypeConstructor.IntersectionStatus> get() = constructor.statusMap
+}
+
+class ConeIntersectionTypeConstructor(
+    val intersectedTypes: Collection<ConeKotlinType>,
+    val statusMap: Map<ConeKotlinType, IntersectionStatus>
+) : TypeConstructorMarker {
+    val supertypes: Collection<ConeKotlinType> get() = intersectedTypes
+
+    /*
+     * IMPORTANT: use this method only for types from intersectedTypes
+     */
+    fun getStatus(type: ConeKotlinType): IntersectionStatus {
+        return statusMap[type] ?: error("")
+    }
+
+    enum class IntersectionStatus {
+        FROM_INFERENCE,
+        FROM_SMARTCAST
+    }
+}

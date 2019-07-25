@@ -8,9 +8,11 @@ package org.jetbrains.kotlin.fir.resolve
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.expressions.FirCalleeReferenceHolder
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccess
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
+import org.jetbrains.kotlin.fir.resolve.calls.Candidate
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
 import org.jetbrains.kotlin.fir.resolve.transformers.resultType
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
@@ -131,6 +133,7 @@ fun <T : ConeKotlinType> T.withNullability(nullability: ConeNullability): T {
         is ConeFlexibleType -> ConeFlexibleType(lowerBound.withNullability(nullability), upperBound.withNullability(nullability)) as T
         is ConeTypeVariableType -> ConeTypeVariableType(nullability, lookupTag) as T
         is ConeCapturedType -> ConeCapturedType(captureStatus, lowerType, nullability, constructor) as T
+        is ConeIntersectionType -> ConeIntersectionType(constructor, nullability) as T
         else -> error("sealed: ${this::class}")
     }
 }
@@ -206,10 +209,12 @@ fun BodyResolveComponents.typeForQualifier(resolvedQualifier: FirResolvedQualifi
     )
 }
 
-
-fun <T : FirQualifiedAccess> BodyResolveComponents.typeFromCallee(access: T): FirResolvedTypeRef {
+fun <T : FirCalleeReferenceHolder> BodyResolveComponents.typeFromCallee(access: T): FirResolvedTypeRef {
     val makeNullable: Boolean by lazy {
-        access.safe && access.explicitReceiver!!.resultType.coneTypeUnsafe<ConeKotlinType>().isNullable
+        if (access is FirQualifiedAccess)
+            access.safe && access.explicitReceiver!!.resultType.coneTypeUnsafe<ConeKotlinType>().isNullable
+        else
+            false
     }
 
     return when (val newCallee = access.calleeReference) {
@@ -226,6 +231,9 @@ fun <T : FirQualifiedAccess> BodyResolveComponents.typeFromCallee(access: T): Fi
             val types = if (labelName == null) labels.values() else labels[Name.identifier(labelName)]
             val type = types.lastOrNull() ?: ConeKotlinErrorType("Unresolved this@$labelName")
             FirResolvedTypeRefImpl(session, null, type, emptyList())
+        }
+        is FirCandidateHolder -> {
+            typeFromSymbol((newCallee.candidate as Candidate).symbol, makeNullable)
         }
         else -> error("Failed to extract type from: $newCallee")
     }

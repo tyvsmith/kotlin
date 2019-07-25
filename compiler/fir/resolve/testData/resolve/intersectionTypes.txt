@@ -1,0 +1,16 @@
+FILE: intersectionTypes.kt
+    public final fun <T> materialize(): R|T| {
+        ^materialize when (lval <bangbang>: R|kotlin/Nothing|? = Null(null)) {
+            ==($subj$, Null(null)) ->  {
+                throw <Unresolved name: KotlinNullPointerException>#()
+            }
+            else ->  {
+                R|<local>/<bangbang>|!
+            }
+        }
+
+    }
+    public final fun <K> select(x: R|K|, y: R|K|): R|K|
+    public final fun test(): R|kotlin/Comparable<it(kotlin/Int & kotlin/String)>| {
+        ^test R|/select|<R|kotlin/Comparable<it(kotlin/Int & kotlin/String)>|>(Int(1), String())
+    }

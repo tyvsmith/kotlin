@@ -56,6 +56,7 @@ fun ConeKotlinType.toIrType(session: FirSession, declarationStorage: Fir2IrDecla
         }
         is ConeCapturedType -> TODO()
         is ConeDefinitelyNotNullType -> TODO()
+        is ConeIntersectionType -> TODO()
     }
 }
 
