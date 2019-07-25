@@ -13,3 +13,4 @@ fun foo(f: () -> Unit) {
 }
 
 // 2 6 9 12 13 3 4 7 8
+// IGNORE_BACKEND: JVM_IR
