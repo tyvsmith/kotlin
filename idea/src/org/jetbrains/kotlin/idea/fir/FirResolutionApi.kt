@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.fir.FirReference
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.resolve.FirProvider
+import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.transformers.*
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.scopes.impl.FirTopLevelDeclaredMemberScope
@@ -19,7 +20,6 @@ import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
@@ -27,33 +27,8 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
 
-private val resolveStageToTransformerMap = mutableMapOf(
-    FirResolvePhase.RAW_FIR to emptyList(),
-    FirResolvePhase.SUPER_TYPES to listOf(
-        FirImportResolveTransformer(),
-        FirSupertypeResolverTransformer()
-    ),
-    FirResolvePhase.DECLARATIONS to listOf(
-        FirImportResolveTransformer(),
-        FirSupertypeResolverTransformer(),
-        FirTypeResolveTransformer(),
-        FirStatusResolveTransformer()
-    ),
-    FirResolvePhase.EXPRESSIONS to listOf(
-        FirImportResolveTransformer(),
-        FirSupertypeResolverTransformer(),
-        FirTypeResolveTransformer(),
-        FirStatusResolveTransformer(),
-        FirImplicitTypeBodyResolveTransformerAdapter(),
-        FirBodyResolveTransformerAdapter()
-    )
-)
-
 private val FirResolvePhase.stubMode: Boolean
-    get() = this != FirResolvePhase.EXPRESSIONS
-
-private val FirResolvePhase.transformers: List<FirTransformer<Nothing?>>
-    get() = resolveStageToTransformerMap[this] ?: emptyList()
+    get() = this <= FirResolvePhase.DECLARATIONS
 
 private fun KtClassOrObject.relativeFqName(): FqName {
     val className = this.nameAsSafeName
@@ -102,12 +77,33 @@ fun KtCallableDeclaration.getOrBuildFir(
     val firProvider = FirProvider.getInstance(session) as IdeFirProvider
     val firFile = firProvider.getOrBuildFile(file)
     val memberSymbol = firFile.findCallableMember(firProvider, this, packageFqName, klassFqName, declName).symbol
-    memberSymbol.fir.runResolve(phase, state, firFile)
+    memberSymbol.fir.runResolve(firFile, firProvider, phase, state)
     return memberSymbol.fir
 }
 
-private fun FirDeclaration.runResolve(toPhase: FirResolvePhase, state: FirResolveState, file: FirFile) {
-    file.runResolve(toPhase = toPhase, fromPhase = this.resolvePhase)
+private fun FirCallableDeclaration<*>.runResolve(
+    file: FirFile,
+    firProvider: IdeFirProvider,
+    toPhase: FirResolvePhase,
+    state: FirResolveState
+) {
+    val nonLazyPhase = minOf(toPhase, FirResolvePhase.DECLARATIONS)
+    file.runResolve(toPhase = nonLazyPhase, fromPhase = this.resolvePhase)
+    if (toPhase > nonLazyPhase) {
+        val designation = mutableListOf<FirElement>()
+        designation += file
+        val id = this.symbol.callableId
+        val outerClasses = generateSequence(id.classId) { classId ->
+            classId.outerClassId
+        }.mapTo(mutableListOf()) { firProvider.getFirClassifierByFqName(it)!! }
+        designation += outerClasses.asReversed()
+        designation += this
+        val transformer = FirDesignatedBodyResolveTransformer(
+            designation.iterator(), state.getSession(psi as KtElement),
+            implicitTypeOnly = toPhase == FirResolvePhase.IMPLICIT_TYPES
+        )
+        file.transform<FirFile, Nothing?>(transformer, null)
+    }
 }
 
 fun KtExpression.getOrBuildFir(

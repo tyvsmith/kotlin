@@ -1238,9 +1238,17 @@ class ReturnTypeCalculatorWithJump(val session: FirSession, val scopeSession: Sc
 }
 
 
-class FirDesignatedBodyResolveTransformer(val designation: Iterator<FirElement>, session: FirSession, scopeSession: ScopeSession) :
-    FirBodyResolveTransformer(session, phase = FirResolvePhase.IMPLICIT_TYPES, implicitTypeOnly = true, scopeSession = scopeSession) {
-
+class FirDesignatedBodyResolveTransformer(
+    private val designation: Iterator<FirElement>,
+    session: FirSession,
+    scopeSession: ScopeSession = ScopeSession(),
+    implicitTypeOnly: Boolean = true
+) : FirBodyResolveTransformer(
+    session,
+    phase = FirResolvePhase.IMPLICIT_TYPES,
+    implicitTypeOnly = implicitTypeOnly,
+    scopeSession = scopeSession
+) {
     override fun <E : FirElement> transformElement(element: E, data: Any?): CompositeTransformResult<E> {
         if (designation.hasNext()) {
             designation.next().visitNoTransform(this, data)
