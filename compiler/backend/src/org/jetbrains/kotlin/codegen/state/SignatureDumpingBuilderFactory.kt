@@ -33,11 +33,11 @@ class SignatureDumpingBuilderFactory(
     companion object {
         val MEMBER_RENDERER = DescriptorRenderer.withOptions {
             withDefinedIn = false
-            modifiers -= DescriptorRendererModifier.VISIBILITY
+            modifiers = modifiers - DescriptorRendererModifier.VISIBILITY
         }
         val TYPE_RENDERER = DescriptorRenderer.withOptions {
             withSourceFileForTopLevel = false
-            modifiers -= DescriptorRendererModifier.VISIBILITY
+            modifiers = modifiers - DescriptorRendererModifier.VISIBILITY
         }
     }
 

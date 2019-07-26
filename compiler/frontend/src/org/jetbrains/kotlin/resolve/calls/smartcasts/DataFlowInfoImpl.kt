@@ -176,7 +176,7 @@ internal class DataFlowInfoImpl private constructor(
         // because own type is not saved in this set
         // Error types are also not saved
         if (!b.type.isError && a.type != b.type) {
-            typesForB += b.type
+            typesForB = typesForB + b.type
         }
 
         return create(this, nullabilityUpdate, listOf(Tuple2(a, typesForB)), a)
