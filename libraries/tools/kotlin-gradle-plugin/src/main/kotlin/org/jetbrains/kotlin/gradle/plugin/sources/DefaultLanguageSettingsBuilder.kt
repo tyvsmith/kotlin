@@ -94,15 +94,15 @@ internal fun applyLanguageSettingsToKotlinTask(
     apiVersion = apiVersion ?: languageSettingsBuilder.apiVersion
 
     if (languageSettingsBuilder.progressiveMode) {
-        freeCompilerArgs += "-progressive"
+        freeCompilerArgs = freeCompilerArgs + "-progressive"
     }
 
     languageSettingsBuilder.enabledLanguageFeatures.forEach { featureName ->
-        freeCompilerArgs += "-XXLanguage:+$featureName"
+        freeCompilerArgs = freeCompilerArgs + "-XXLanguage:+$featureName"
     }
 
     languageSettingsBuilder.experimentalAnnotationsInUse.forEach { annotationName ->
-        freeCompilerArgs += "-Xuse-experimental=$annotationName"
+        freeCompilerArgs = freeCompilerArgs + "-Xuse-experimental=$annotationName"
     }
 }
 
