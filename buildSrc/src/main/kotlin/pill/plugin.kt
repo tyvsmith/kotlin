@@ -255,7 +255,7 @@ class JpsCompatiblePlugin : Plugin<Project> {
                     .files.joinToString(File.pathSeparator)
 
                 if (options.none { it == "-ea" }) {
-                    options += "-ea"
+                    options = options + "-ea"
                 }
 
                 addOrReplaceOptionValue("idea.home.path", platformDirProjectRelative)
