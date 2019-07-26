@@ -46,11 +46,11 @@ import org.jetbrains.kotlin.types.TypeProjection
 
 object LambdaSignatureTemplates {
     fun insertTemplate(
-            context: InsertionContext,
-            placeholderRange: TextRange,
-            lambdaType: KotlinType,
-            explicitParameterTypes: Boolean,
-            signatureOnly: Boolean
+        context: InsertionContext,
+        placeholderRange: TextRange,
+        lambdaType: KotlinType,
+        explicitParameterTypes: Boolean,
+        signatureOnly: Boolean
     ) {
         // we start template later to not interfere with insertion of tail type
         val commandProcessor = CommandProcessor.getInstance()
@@ -77,8 +77,7 @@ object LambdaSignatureTemplates {
                         val template = buildTemplate(lambdaType, signatureOnly, explicitParameterTypes, context.project)
                         TemplateManager.getInstance(context.project).startTemplate(context.editor, template)
                     }
-                }
-                finally {
+                } finally {
                     rangeMarker.dispose()
                 }
             }
@@ -114,16 +113,18 @@ object LambdaSignatureTemplates {
 
     fun explicitParameterTypesRequired(file: KtFile, placeholderRange: TextRange, lambdaType: KotlinType): Boolean {
         PsiDocumentManager.getInstance(file.project).commitAllDocuments()
-        val expression = PsiTreeUtil.findElementOfClassAtRange(file, placeholderRange.startOffset, placeholderRange.endOffset, KtExpression::class.java)
-                         ?: return false
+        val expression =
+            PsiTreeUtil.findElementOfClassAtRange(file, placeholderRange.startOffset, placeholderRange.endOffset, KtExpression::class.java)
+                ?: return false
 
         val resolutionFacade = file.getResolutionFacade()
         val bindingContext = resolutionFacade.analyze(expression, BodyResolveMode.PARTIAL)
-        val expectedInfos = ExpectedInfos(bindingContext, resolutionFacade, indicesHelper = null, useHeuristicSignatures = false).calculate(expression)
+        val expectedInfos =
+            ExpectedInfos(bindingContext, resolutionFacade, indicesHelper = null, useHeuristicSignatures = false).calculate(expression)
         val functionTypes = expectedInfos
-                .mapNotNull { it.fuzzyType?.type }
-                .filter(KotlinType::isFunctionType)
-                .toSet()
+            .mapNotNull { it.fuzzyType?.type }
+            .filter(KotlinType::isFunctionType)
+            .toSet()
         return explicitParameterTypesRequired(functionTypes, lambdaType)
     }
 
@@ -138,10 +139,10 @@ object LambdaSignatureTemplates {
     }
 
     private fun buildTemplate(
-            lambdaType: KotlinType,
-            signatureOnly: Boolean,
-            explicitParameterTypes: Boolean,
-            project: Project
+        lambdaType: KotlinType,
+        signatureOnly: Boolean,
+        explicitParameterTypes: Boolean,
+        project: Project
     ): Template {
         val parameterTypes = functionParameterTypes(lambdaType)
 
@@ -161,14 +162,13 @@ object LambdaSignatureTemplates {
             }
             //TODO: check for names in scope
             val parameterName = parameterType.extractParameterNameFromFunctionTypeArgument()?.render()
-            val nameExpression =  if (parameterName != null) {
+            val nameExpression = if (parameterName != null) {
                 object : Expression() {
                     override fun calculateResult(context: ExpressionContext?) = TextResult(parameterName)
                     override fun calculateQuickResult(context: ExpressionContext?): Result? = TextResult(parameterName)
                     override fun calculateLookupItems(context: ExpressionContext?) = emptyArray<LookupElement>()
                 }
-            }
-            else {
+            } else {
                 val count = (noNameParameterCount[parameterType] ?: 0) + 1
                 noNameParameterCount[parameterType] = count
                 val suffix = if (count == 1) null else "$count"
@@ -176,8 +176,8 @@ object LambdaSignatureTemplates {
                 object : Expression() {
                     override fun calculateResult(context: ExpressionContext?) = TextResult(nameSuggestions[0])
                     override fun calculateQuickResult(context: ExpressionContext?): Result? = null
-                    override fun calculateLookupItems(context: ExpressionContext?)
-                            = nameSuggestions.map { LookupElementBuilder.create(it) }.toTypedArray()
+                    override fun calculateLookupItems(context: ExpressionContext?) =
+                        nameSuggestions.map { LookupElementBuilder.create(it) }.toTypedArray()
                 }
             }
             template.addVariable(nameExpression, true)
@@ -201,7 +201,7 @@ object LambdaSignatureTemplates {
         val suggestions = KotlinNameSuggester.suggestNamesByType(parameterType, { true }, "p")
         return if (suffix != null) suggestions.map { "$it$suffix" } else suggestions
     }
-    
+
     private fun nameSuggestion(parameterType: KotlinType) = nameSuggestions(parameterType)[0]
 
     private fun functionParameterTypes(functionType: KotlinType): List<KotlinType> {
