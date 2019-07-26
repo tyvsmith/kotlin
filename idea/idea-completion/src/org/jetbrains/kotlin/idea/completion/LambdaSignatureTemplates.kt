@@ -135,7 +135,7 @@ object LambdaSignatureTemplates {
     }
 
     private val TYPE_RENDERER = IdeDescriptorRenderers.SOURCE_CODE.withOptions {
-        modifiers -= DescriptorRendererModifier.ANNOTATIONS
+        modifiers = modifiers - DescriptorRendererModifier.ANNOTATIONS
     }
 
     private fun buildTemplate(

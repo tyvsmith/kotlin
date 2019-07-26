@@ -29,7 +29,7 @@ class IncompatibleAPIInspection : LocalInspectionTool(), CustomSuppressableInspe
     )
 
     // Stored in inspection setting
-    var problems: List<Problem> = arrayListOf()
+    private val problems: MutableList<Problem> = mutableListOf()
 
     fun addProblem(reference: String, reason: String?) {
         problems += Problem(reference, reason)
@@ -67,7 +67,7 @@ class IncompatibleAPIInspection : LocalInspectionTool(), CustomSuppressableInspe
 
             element.language == JavaLanguage.INSTANCE -> {
                 val key = HighlightDisplayKey.find(shortName)
-                        ?: throw AssertionError("HighlightDisplayKey.find($shortName) is null. Inspection: $javaClass")
+                    ?: throw AssertionError("HighlightDisplayKey.find($shortName) is null. Inspection: $javaClass")
                 return SuppressManager.getInstance().createSuppressActions(key)
             }
 

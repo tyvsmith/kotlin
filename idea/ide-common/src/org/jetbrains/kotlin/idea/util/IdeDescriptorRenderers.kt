@@ -74,7 +74,7 @@ object IdeDescriptorRenderers {
     val SOURCE_CODE_TYPES_WITH_SHORT_NAMES: DescriptorRenderer = BASE.withOptions {
         classifierNamePolicy = ClassifierNamePolicy.SHORT
         typeNormalizer = { APPROXIMATE_FLEXIBLE_TYPES(unwrapAnonymousType(it)) }
-        modifiers -= DescriptorRendererModifier.ANNOTATIONS
+        modifiers = modifiers - DescriptorRendererModifier.ANNOTATIONS
         parameterNamesInFunctionalTypes = false
     }
 
@@ -88,6 +88,6 @@ object IdeDescriptorRenderers {
     val SOURCE_CODE_SHORT_NAMES_NO_ANNOTATIONS: DescriptorRenderer = BASE.withOptions {
         classifierNamePolicy = ClassifierNamePolicy.SHORT
         typeNormalizer = { APPROXIMATE_FLEXIBLE_TYPES(unwrapAnonymousType(it)) }
-        modifiers -= DescriptorRendererModifier.ANNOTATIONS
+        modifiers = modifiers - DescriptorRendererModifier.ANNOTATIONS
     }
 }

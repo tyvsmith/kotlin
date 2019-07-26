@@ -66,16 +66,14 @@ abstract class KotlinWithLibraryConfigurator protected constructor() : KotlinPro
         val defaultPathToJar = getDefaultPathToJarFile(project)
         val showPathToJarPanel = needToChooseJarPath(project)
 
-        var nonConfiguredModules = if (!ApplicationManager.getApplication().isUnitTestMode)
+        var modulesToConfigure = (if (!ApplicationManager.getApplication().isUnitTestMode)
             getCanBeConfiguredModules(project, this)
         else
-            listOf(*ModuleManager.getInstance(project).modules)
-        nonConfiguredModules -= excludeModules
+            listOf(*ModuleManager.getInstance(project).modules)) - excludeModules
 
-        var modulesToConfigure = nonConfiguredModules
         var copyLibraryIntoPath: String? = null
 
-        if (nonConfiguredModules.size > 1 || showPathToJarPanel) {
+        if (modulesToConfigure.size > 1 || showPathToJarPanel) {
             val dialog = CreateLibraryDialogWithModules(
                 project, this, defaultPathToJar, showPathToJarPanel,
                 dialogTitle,

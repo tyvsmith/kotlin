@@ -70,7 +70,7 @@ abstract class TypesWithOperatorDetector(
             var freeParameters = function.typeParameters
             val containingClass = function.containingDeclaration as? ClassDescriptor
             if (containingClass != null) {
-                freeParameters += containingClass.typeConstructor.parameters
+                freeParameters = freeParameters + containingClass.typeConstructor.parameters
             }
 
             val substitutor = checkIsSuitableByType(function, freeParameters) ?: continue
