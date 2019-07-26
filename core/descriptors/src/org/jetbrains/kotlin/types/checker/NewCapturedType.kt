@@ -100,7 +100,7 @@ fun captureFromArguments(
             NewKotlinTypeChecker.transformToNewType(substitutor.safeSubstitute(it, Variance.INVARIANT).unwrap())
         }
         if (!oldProjection.isStarProjection && oldProjection.projectionKind == Variance.OUT_VARIANCE) {
-            upperBounds += NewKotlinTypeChecker.transformToNewType(oldProjection.type.unwrap())
+            upperBounds = upperBounds + NewKotlinTypeChecker.transformToNewType(oldProjection.type.unwrap())
         }
 
         val capturedType = newProjection.type as NewCapturedType

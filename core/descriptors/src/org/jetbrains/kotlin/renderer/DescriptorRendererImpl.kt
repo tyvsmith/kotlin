@@ -36,13 +36,13 @@ internal class DescriptorRendererImpl(
 
     private val functionTypeAnnotationsRenderer: DescriptorRendererImpl by lazy {
         withOptions {
-            excludedTypeAnnotationClasses += listOf(KotlinBuiltIns.FQ_NAMES.extensionFunctionType)
+            excludedTypeAnnotationClasses = excludedTypeAnnotationClasses + listOf(KotlinBuiltIns.FQ_NAMES.extensionFunctionType)
             annotationArgumentsRenderingPolicy = AnnotationArgumentsRenderingPolicy.ALWAYS_PARENTHESIZED
         } as DescriptorRendererImpl
     }
 
     private val functionTypeParameterTypesRenderer: DescriptorRenderer by lazy {
-        withOptions { excludedTypeAnnotationClasses += listOf(KotlinBuiltIns.FQ_NAMES.parameterName) }
+        withOptions { excludedTypeAnnotationClasses = excludedTypeAnnotationClasses + listOf(KotlinBuiltIns.FQ_NAMES.parameterName) }
     }
 
     /* FORMATTING */
